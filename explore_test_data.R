@@ -7,3 +7,6 @@ all <-
 
 p <- ggplot(all, aes(x = Well, y = Nuclei_AR_Solidity_Filtered_AreaShape_Area))
 p + geom_boxplot()
+
+p <- ggplot(all, aes(x = Well))
+p + geom_bar()
