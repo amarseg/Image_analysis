@@ -36,3 +36,29 @@ load_filtered_data <- function(csv_path, plate_n)
   
   return(data)
 }
+
+plot_cell_proportion <- function(cell_count_data, bad_well_thr = 0.2)
+{
+  proportions <- cell_count_data %>%
+    select(Count_Nuclei, Count_Nuclei_AR_filtered, Count_Nuclei_AR_Solidity_Filtered, FileName_DNA, Metadata_Plate_Name) %>%
+    separate(FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
+    mutate(Proportion_AR_filter = Count_Nuclei_AR_filtered/(Count_Nuclei+Count_Nuclei_AR_filtered), 
+           Proportion_solidity_filter = Count_Nuclei_AR_Solidity_Filtered/(Count_Nuclei_AR_filtered+ Count_Nuclei_AR_Solidity_Filtered))
+  
+  test <- gather(cell_number, key = feature, value = cell_count, -plate_name, -Well) %>%
+    filter(feature == 'Proportion_AR_filter' | feature == 'Proportion_solidity_filter')
+  
+  ggplot(test, aes(x = Well, group = feature, fill = feature, y = cell_count)) +
+    geom_bar( stat = 'identity') +
+    facet_wrap(~plate_name)
+  
+  ggplot(test, aes(group = feature, fill = feature, x = cell_count)) +
+    geom_histogram() +
+    facet_wrap(~plate_name)
+  
+  bad_wells <- filter(proportions, Proportion_solidity_filter < 0.2) %>%
+    select(plate_name, Well, Picture) %>%
+    return()
+  
+
+}

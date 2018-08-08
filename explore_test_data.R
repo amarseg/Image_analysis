@@ -1,7 +1,7 @@
 library('tidyverse')
 source('functions_CPA.R')
 
-
+#analyse plate data
 plate1 <- load_filtered_data('../Analysed_data/Plate1_20f/Nuclei_AR_Solidity_Filtered.csv', plate_n = 1)
 plate2 <- load_filtered_data('../Analysed_data/Plate2_20f/Nuclei_AR_Solidity_Filtered.csv', plate_n = 2)
 plate3 <- load_filtered_data('../Analysed_data/Plate3_20f/Nuclei_AR_Solidity_Filtered.csv', plate_n = 3)
@@ -16,3 +16,23 @@ p + geom_bar()+ facet_wrap(~Metadata_Plate_Name)
 
 p <- ggplot(all_plates, aes(x = Metadata_Well, y = AreaShape_MinorAxisLength))
 p + geom_boxplot()+ facet_wrap(~Metadata_Plate_Name)
+
+#Load number of cells per filter
+cell_number <- read_csv('../Analysed_data/cell_countsImage.csv') %>%
+  select(Count_Nuclei, Count_Nuclei_AR_filtered, Count_Nuclei_AR_Solidity_Filtered, FileName_DNA) %>%
+  separate(FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
+  mutate(Proportion_AR_filter = Count_Nuclei_AR_filtered/(Count_Nuclei+Count_Nuclei_AR_filtered), 
+         Proportion_solidity_filter = Count_Nuclei_AR_Solidity_Filtered/(Count_Nuclei_AR_filtered+ Count_Nuclei_AR_Solidity_Filtered))
+
+plate_name <- c(rep('Plate1',96*9), rep('Plate2',96*9), rep('Plate3',96*9), rep('Plate4',96*8))
+cell_number$plate_name <- plate_name
+
+test <- gather(cell_number, key = feature, value = cell_count, -plate_name, -Well) %>%
+  filter(feature == 'Proportion_AR_filter' | feature == 'Proportion_solidity_filter')
+
+ggplot(test, aes(group = feature, fill = feature, x = cell_count)) +
+  geom_histogram() +
+  facet_wrap(~plate_name)
+
+bad_wells <- filter(cell_number, Proportion_solidity_filter < 0.2) %>%
+  select(plate_name, Well,Picture) 
