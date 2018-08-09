@@ -1,4 +1,5 @@
 library('tidyverse')
+library('clusterProfiler')
 source('functions_CPA.R')
 
 #analyse plate data
@@ -36,3 +37,20 @@ ggplot(test, aes(group = feature, fill = feature, x = cell_count)) +
 
 bad_wells <- filter(cell_number, Proportion_solidity_filter < 0.2) %>%
   select(plate_name, Well,Picture) 
+
+#Add mean and sd of randomised control distribution to area plot
+median_dist <- draw_control_dist(all_plates, n = 1000, size = 0.25, column = 'AreaShape_Area')
+
+p <- ggplot(all_plates, aes(x = Metadata_Well, y = AreaShape_Area))
+p + geom_boxplot() + 
+  facet_wrap(~Metadata_Plate_Name) +
+  geom_hline(yintercept = mean(median_dist$value)) +
+  geom_hline(yintercept = mean(median_dist$value) + 2*sd(median_dist$value), color = 'red') +
+  geom_hline(yintercept = mean(median_dist$value) - 2*sd(median_dist$value), color = 'red')
+
+#Filter mutants higher than the mean
+hits <- all_plates %>%
+  group_by(Metadata_Plate_Name, Metadata_Well) %>%
+  summarise(mean_area = mean(AreaShape_Area), id = unique(`Systematic ID`)) %>%
+  filter(mean_area > mean(median_dist$value)) %>%
+  write_csv('hits.csv')

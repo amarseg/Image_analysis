@@ -60,5 +60,13 @@ plot_cell_proportion <- function(cell_count_data, bad_well_thr = 0.2)
     select(plate_name, Well, Picture) %>%
     return()
   
+}
 
+draw_control_dist <- function(plates_data, n, size, column)
+{
+  means <- rerun(n, sample_frac(plates_data[,column], size = size)) %>%
+    sapply(function(x){mean(x[[1]])}) %>%
+    as_data_frame() %>%
+    return()
+  
 }
