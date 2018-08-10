@@ -31,6 +31,8 @@ load_filtered_data <- function(csv_path, plate_n)
   
   data <- 
     read_csv(csv_path) %>% 
+    #mutate(File_name = basename(Metadata_FileLocation)) %>%
+    #separate(File_name, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
     filter(Metadata_QCFlag != 1) %>%
     left_join(strain_data, by = c( 'Metadata_WellNumber' = 'Well'))
   
