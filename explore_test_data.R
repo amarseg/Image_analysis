@@ -79,10 +79,10 @@ p + geom_boxplot()+ facet_wrap(~Metadata_Plate_Name) +
 #Let's do a t.test with the backgroudn distribution I made! Then correct p-values using fdr
 #or bonferroni
 
-control_dist <- sample_frac(image_data, size = 0.25)
+control_dist <- image_data$AreaShape_Area
 
 t_test <- image_data %>%
   group_by(Well, Metadata_Plate_Name) %>%
-  summarise(p.value = t.test(x = control_dist$AreaShape_Area, y = AreaShape_Area)$p.value,
+  summarise(p.value = t.test(x = control_dist, y = AreaShape_Area)$p.value,
             id = unique(`Systematic ID`)) %>%
   mutate(adj.pval = p.adjust(p.value, method = 'bonferroni'))
