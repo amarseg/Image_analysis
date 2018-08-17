@@ -21,16 +21,23 @@ qc_rep2 <- read_csv('../Analysed_data/11hr_exp/cell_countsImage.csv') %>%
 
 ggplot(qc_rep1, aes(x = feature_value)) +
   geom_histogram() +
-  facet_wrap(~feature, scales = 'free') %>% ggsave('figs/replicate_comparison/features_rep1_pdf', scale = 2)
+  facet_wrap(~feature, scales = 'free')
+ggsave('figs/replicate_comparison/features_rep1_pdf', scale = 2)
 
 ggplot(qc_rep2, aes(x = feature_value)) +
   geom_histogram() +
-  facet_wrap(~feature, scales = 'free') %>% ggsave('figs/replicate_comparison/features_rep2_pdf', scale = 2)
+  facet_wrap(~feature, scales = 'free')
+ggsave('figs/replicate_comparison/features_rep2_pdf', scale = 2)
 
 qc_data <- bind_rows(qc_rep1, qc_rep2, .id = 'id' )
 ggplot(qc_data, aes(x = feature_value, fill = id)) +
   geom_histogram(alpha = 0.8) +
-  facet_wrap(~feature, scales = 'free') %>% ggsave('figs/replicate_comparison/comparison_image_quality.pdf')
+  facet_wrap(~feature, scales = 'free')
+ggsave('figs/replicate_comparison/comparison_image_quality.pdf')
+
+
+qc_1 <- spread(qc_rep1, key = feature, value = feature_value)
+qc_2 <- spread(qc_rep2, key = feature, value = feature_value)
 
 ##
 #Load image data
@@ -42,9 +49,12 @@ plate4 <- load_filtered_data('../Analysed_data/adding_quality_features/Plate4_wP
 
 rep1 <- bind_rows(plate1, plate2, plate3, plate4) %>%
   group_by(Metadata_Plate_Name, Metadata_Well) %>%
-  summarise(avg_area = mean(AreaShape_Area)) %>%
+  inner_join(qc_1, by = c('Well','Picture','Metadata_Plate_Name')) %>%
+  filter(ImageQuality_PowerLogLogSlope_DNA > -2.5) %>%
+  summarise(avg_area = mean(AreaShape_Area),accesion = unique(`Systematic ID`)) %>%
   separate(Metadata_Plate_Name, into = c('Metadata_Plate_Name','bad_bit'), sep = '_') %>%
   select(-bad_bit)
+  
 
 plate1 <- load_filtered_data('../Analysed_data/11hr_exp/Plate1/Nuclei_AR_Solidity_Filtered.csv', plate_n = 1)
 plate2 <- load_filtered_data('../Analysed_data/11hr_exp/Plate2/Nuclei_AR_Solidity_Filtered.csv', plate_n = 2)
@@ -53,7 +63,9 @@ plate4 <- load_filtered_data('../Analysed_data/11hr_exp/Plate4/Nuclei_AR_Solidit
 
 rep2 <- bind_rows(plate1, plate2, plate3, plate4) %>% 
   group_by(Metadata_Plate_Name, Metadata_Well) %>%
-  summarise(avg_area = mean(AreaShape_Area))
+  inner_join(qc_2, by = c('Well','Picture','Metadata_Plate_Name')) %>%
+  filter(ImageQuality_PowerLogLogSlope_DNA > -2.5) %>%
+  summarise(avg_area = mean(AreaShape_Area), accesion = unique(`Systematic ID`))
 
 all_reps <- inner_join(rep1, rep2, suffix = c('_rep1','_rep2'), by = c('Metadata_Plate_Name', 'Metadata_Well')) %>%
   mutate(ratio = avg_area_rep1/avg_area_rep2)
@@ -61,14 +73,16 @@ all_reps <- inner_join(rep1, rep2, suffix = c('_rep1','_rep2'), by = c('Metadata
 ggplot(all_reps, aes(x = avg_area_rep1, y = avg_area_rep2, label = Metadata_Well)) +
   geom_point() +
   facet_wrap(~Metadata_Plate_Name, scales = 'free') +
-  geom_label() %>% ggsave('figs/replicate_comparison/mean_area_plot_comparison.pdf')
+  geom_label()
+ggsave('figs/replicate_comparison/mean_area_plot_comparison.pdf')
 
 ggplot(all_reps, aes(x = ratio)) +
   geom_histogram() +
   facet_wrap(~Metadata_Plate_Name, scales = 'free') +
-  scale_x_log10() + 
-  geom_rug() %>% ggsave('figs/replicate_comparison/ratio_between_replicates_histogram.pdf')
+  geom_rug()
+ggsave('figs/replicate_comparison/ratio_between_replicates_histogram.pdf')
 
+weird_plate4 <- filter(all_reps, ratio < 0.75 & Metadata_Plate_Name == 'Plate4')
 
 
 
