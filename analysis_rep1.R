@@ -1,0 +1,34 @@
+###This will take the whole data and make plots (hopefully)
+library('tidyverse')
+source('functions_CPA.R')
+dir.create('plots')
+
+wild_type_path <- '../Analysed_data/wt_data/None/'
+
+wild_type <- read_csv(per_image_data) %>%
+  select(ImageNumber, Image_Metadata_QCFlag,Image_FileName_DNA) %>%
+  separate(Image_FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
+  transform(Well_n = str_sub(Well_n, start = 5, end = 7))
+
+cell_number <- read_csv('../Analysed_data/aug_sept_2018/cell_countsImage.csv') %>%
+  separate(FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
+  mutate(Proportion_AR_filter = Count_Nuclei_AR_filtered/(Count_Nuclei+Count_Nuclei_AR_filtered), 
+         Proportion_solidity_filter = Count_Nuclei_AR_Solidity_Filtered/(Count_Nuclei_AR_filtered+ Count_Nuclei_AR_Solidity_Filtered))
+
+test <- gather(cell_number, key = feature, value = cell_count, -Metadata_Plate_Name, -Well) %>%
+  filter(feature == 'Proportion_AR_filter' | feature == 'Proportion_solidity_filter')
+
+all_files <- list.files('../Analysed_data/aug_sept_2018/', full.names = T, recursive = T, pattern = 'Nuclei_AR_Solidity_Filtered.csv')
+all_files <- all_files[1:36]
+
+for(file in all_files)
+{
+  plate_n <- str_extract(file, pattern = '[0-9]{2}')
+  data <- load_filtered_data(file, plate_n = plate_n) %>%
+    left_join(cell_number, by = c('Well' = 'Well','Metadata_Plate_Name') ) %>%
+    filter(ImageQuality_Correlation_DNA_20 < 0.5 & ImageQuality_PowerLogLogSlope_DNA > -2.5)
+  
+  ggplot(data, aes(x = Well, y = AreaShape_Area))
+  filename <- paste0('plots/Plate_',plate_n,'.pdf')
+  ggsave(filename = filename)
+}
