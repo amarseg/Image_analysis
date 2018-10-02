@@ -20,7 +20,7 @@ cell_number <- read_csv('../Analysed_data/aug_sept_2018/cell_countsImage.csv') %
 ggplot(wild_type, aes(x = Well_n, y = AreaShape_Area)) +
   geom_boxplot()
 
-mean_wt <- mean(wild_type$AreaShape_Area)
+mean_wt <- mean(wild_type$AreaShape_Area, trim = 0.1)
 sd_wt <- sd(wild_type$AreaShape_Area)
 
 test <- gather(cell_number, key = feature, value = cell_count, -Metadata_Plate_Name, -Well) %>%
@@ -30,13 +30,15 @@ all_files <- list.files('../Analysed_data/aug_sept_2018/', full.names = T, recur
 all_files <- all_files[1:36]
 
 pval <- list()
+z_scores <- list()
+areas <- list()
 i = 1
 for(file in all_files)
 {
   plate_n <- str_extract(file, pattern = 'Plate[0-9]{1,2}')
   data <- load_filtered_data(file, plate_n = plate_n) %>%
     left_join(cell_number, by = c('Well' = 'Well','Metadata_Plate_Name') ) %>%
-    filter(ImageQuality_Correlation_DNA_20 < 0.5 & ImageQuality_PowerLogLogSlope_DNA > -2.5)
+    filter(ImageQuality_Correlation_DNA_20 < 0.5 & ImageQuality_PowerLogLogSlope_DNA > -2.5 & AreaShape_Solidity > 0.9) 
   
   ggplot(data, aes(x = Well, y = AreaShape_Area)) +
     geom_boxplot(notch = T) + ylim(0,2500) +
@@ -48,12 +50,27 @@ for(file in all_files)
   ggsave(filename = filename, scale = 2)
   
   test <- data %>% 
-    select(Well, AreaShape_Area) %>%
-    group_by(Well) %>%
+    select(Well, Metadata_Plate_Name,AreaShape_Area) %>%
+    group_by(Well,Metadata_Plate_Name) %>%
+    add_count(Well) %>%
+    filter(n > 50) %>%
     summarise(pvalue = t.test(AreaShape_Area, y = wild_type$AreaShape_Area)$p.value, Plate = plate_n)
   
   pval[[i]] <- test
   names(pval)[i] <- plate_n
+  
+  z_scores[[i]] <- data %>%
+    group_by(Well, Metadata_Plate_Name) %>%
+    add_count(Well) %>%
+    filter(n > 50) %>%
+    summarise(mean_area = mean(AreaShape_Area, trim = 0.1), sd_area = sd(AreaShape_Area)) %>%
+    mutate(z_score = (mean_area - mean_wt)/sd_wt)
+
+  
+  areas[[i]] <- data %>%
+    add_count(Well) %>%
+    filter(n >50) %>%
+    select(AreaShape_Area,`Systematic ID`,Metadata_Plate_Name)
   
   i = i+1
   rm(data)
