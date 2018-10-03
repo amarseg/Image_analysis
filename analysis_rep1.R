@@ -10,12 +10,16 @@ wild_type_path <- '../Analysed_data/wt_data/Nuclei_AR_Solidity_Filtered.csv'
 wild_type <- read_csv(wild_type_path) %>%
   filter(Metadata_QCFlag == 0) %>%
   separate(Metadata_FileLocation, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
-  transform(Well_n = str_sub(Well_n, start = 5, end = 7))
+  transform(Well_n = str_sub(Well_n, start = 5, end = 7)) %>%
+  transform(Well = str_extract(Well,pattern = '[A-Z][0-9]{1,2}'))
 
 cell_number <- read_csv('../Analysed_data/aug_sept_2018/cell_countsImage.csv') %>%
   separate(FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
   mutate(Proportion_AR_filter = Count_Nuclei_AR_filtered/(Count_Nuclei+Count_Nuclei_AR_filtered), 
-         Proportion_solidity_filter = Count_Nuclei_AR_Solidity_Filtered/(Count_Nuclei_AR_filtered+ Count_Nuclei_AR_Solidity_Filtered))
+         Proportion_solidity_filter = Count_Nuclei_AR_Solidity_Filtered/(Count_Nuclei_AR_filtered+ Count_Nuclei_AR_Solidity_Filtered)) 
+
+wild_type <- left_join(wild_type, cell_number, by = 'Well') %>%
+  filter(ImageQuality_Correlation_DNA_20< 0.5 & ImageQuality_PowerLogLogSlope_DNA > -2.5 & AreaShape_Solidity > 0.9) 
 
 ggplot(wild_type, aes(x = Well_n, y = AreaShape_Area)) +
   geom_boxplot()
@@ -50,33 +54,69 @@ for(file in all_files)
   ggsave(filename = filename, scale = 2)
   
   test <- data %>% 
-    select(Well, Metadata_Plate_Name,AreaShape_Area) %>%
-    group_by(Well,Metadata_Plate_Name) %>%
+    select(Well, Metadata_Plate_Name,AreaShape_Area,`Systematic ID`) %>%
+    group_by(`Systematic ID`) %>%
     add_count(Well) %>%
     filter(n > 50) %>%
-    summarise(pvalue = t.test(AreaShape_Area, y = wild_type$AreaShape_Area)$p.value, Plate = plate_n)
+    summarise(pvalue = t.test(AreaShape_Area, y = wild_type$AreaShape_Area)$p.value)
   
   pval[[i]] <- test
   names(pval)[i] <- plate_n
   
   z_scores[[i]] <- data %>%
-    group_by(Well, Metadata_Plate_Name) %>%
-    add_count(Well) %>%
+    group_by(`Systematic ID`) %>%
+    add_count(`Systematic ID`) %>%
     filter(n > 50) %>%
     summarise(mean_area = mean(AreaShape_Area, trim = 0.1), sd_area = sd(AreaShape_Area)) %>%
     mutate(z_score = (mean_area - mean_wt)/sd_wt)
 
   
   areas[[i]] <- data %>%
-    add_count(Well) %>%
+    add_count(`Systematic ID`) %>%
     filter(n >50) %>%
-    select(AreaShape_Area,`Systematic ID`,Metadata_Plate_Name)
+    select(AreaShape_Area,`Systematic ID`,Metadata_Plate_Name, Well)
   
   i = i+1
   rm(data)
   
 }
 
-pval_df <-as.data.frame(pval)
+load('lists.011018.rda')
+gene_list <- stack(out)
 
+area_tib <- bind_rows(areas)
+pval_tib <- bind_rows(pval)
+
+wt_values <- c('wt',mean_wt,sd_wt, 0, sd_wt/mean_wt, 'wt' )
+
+z_score_tib <- bind_rows(z_scores) %>%
+  mutate(cv = sd_area/mean_area) %>%
+  left_join(gene_list, by = c('Systematic ID' = 'values')) %>%
+  add_row(`Systematic ID` = 'wt',
+          mean_area = mean_wt,
+          sd_area = sd_wt, 
+          z_score = 0, 
+          cv=sd_wt/mean_wt, 
+          ind = 'wt')
+
+wt_areas <- wild_type %>%
+  select(AreaShape_Area, Well) 
+wt_areas$Metadata_Plate_Name <- 'Wt'
+wt_areas$`Systematic ID` <- 'Wt'
+
+all_areas <- bind_rows(area_tib, wt_areas) %>%
+  left_join(gene_list, by = c('Systematic ID' = 'values'))
+
+all_areas$ind <- as.character(all_areas$ind)
+all_areas[which(all_areas$`Systematic ID` == 'Wt'),]$ind <- 'wt'
+
+ggplot(z_score_tib, aes(x = mean_area, y = cv, color = ind)) +
+  geom_point()
+
+only_imp <-all_areas %>%
+  filter(!is.na(ind))
+
+ggplot(only_imp, aes(x=reorder(`Systematic ID`, AreaShape_Area, mean), y = AreaShape_Area, color = ind)) +
+  geom_boxplot() +
+  ylim(100, 1000)
 

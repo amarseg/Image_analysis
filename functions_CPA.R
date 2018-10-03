@@ -23,10 +23,10 @@ load_filtered_data <- function(csv_path, plate_n)
   require(tidyverse)
   
   strain_data <- read_csv('library_strains.csv') %>%
-    select('Ver5.0 position','Systematic ID') %>%
-    separate('Ver5.0 position', into = c('Version','Plate','Well')) %>%
+    select(`Ver5.0 position`,`Systematic ID`) %>%
+    separate(`Ver5.0 position`, into = c('Version','Plate','Well')) %>%
     mutate(Plate = str_extract(Plate, pattern = '[:digit:]{2}')) %>%
-    mutate(Plate = as.numeric(Plate), Well = as.numeric(Well)) %>%
+    mutate(Plate = paste0('Plate',as.numeric(Plate)), Well = as.numeric(Well)) %>%
     filter(Plate == plate_n)
   
   data <- 
