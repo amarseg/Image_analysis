@@ -94,3 +94,51 @@ load_gene_lists <- function()
 
 }
 
+load_omics_data <- function()
+{
+  require(tidyverse)
+  require(DESeq2)
+  
+  #RNa procesing
+  rna <- read_csv('rna_seq.csv') 
+  size_factors <- rna %>%
+    select(-ID) %>%
+    estimateSizeFactorsForMatrix()
+  
+  rna[,-1] <- sweep(rna[,-1],MARGIN=2,FUN="/",STATS=size_factors) %>%
+    as.data.frame()
+  
+  final_rna <- rna %>%
+    gather(key = sample_name, value  = read_number, -ID) %>%
+    separate(sample_name, into = c('not needed','time_point','replicate'), sep = '_') %>%
+    select(-`not needed`) %>%
+    mutate(time_point = str_extract(time_point, pattern = '[:digit:]{1,2}')) %>%
+    mutate(replicate = str_extract(replicate, pattern = '[:digit:]{1}')) %>%
+    add_column(molecule = 'RNA')
+  
+
+  #Protein procesing
+  prot <- read_delim('SQ_Results_PROTEIN.tsv', delim = '\t') %>%
+    select(proteinName, b018p004AM_T0_01:b018p004AM_T11_G3_02) %>%
+    filter(str_detect(proteinName, pattern = 'SP')) %>%
+    gather(key = sample_name, value = read_number, -proteinName) %>%
+    separate(sample_name, into = c('no','time_point','replicate','technical_replicate'), sep = '_') %>%
+    separate(proteinName, into = c('ID','gene_name','chr','desc'), sep = '\\|') %>%
+    mutate(time_point = str_extract(time_point, pattern = '[:digit:]{1,2}')) %>%
+    mutate(replicate = str_extract(replicate, pattern = '[:digit:]{1}')) %>%
+    select(-(gene_name:desc), -no) %>%
+    add_column(molecule = 'Protein')
+  
+  t <- prot[which(is.na(prot$technical_replicate)),]
+  t$technical_replicate <- t$replicate  
+  t$replicate <-1
+  
+  prot[which(is.na(prot$technical_replicate)),] <- t
+  
+  mean_prot <- prot %>%
+    group_by(ID, time_point, replicate, molecule) %>%
+    summarise_at('read_number', mean)
+  
+  omics_dataset <- bind_rows(final_rna, mean_prot) %>%
+    return()
+}
