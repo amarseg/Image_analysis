@@ -149,3 +149,17 @@ ggplot(subset(all_omics_hits, ID == 'SPBC31F10.13c'),aes(x = time_point.x, y = l
   facet_wrap(~molecule) +
   geom_line(aes(group = interaction(ID,replicate)))
 ggsave('figs/hip1_omics.pdf')
+
+
+###phenotype summary
+fypo <- read_csv('deletion_phenotypes.csv') %>%
+  inner_join(hits_summary, by = c(`Systematic ID`= 'values'))
+
+ggplot(fypo, aes(x = ind, fill = `Phenotypic classification used for analysis`))+
+  geom_bar() 
+
+ggplot(fypo, aes(x = ind, fill = `Deletion mutant phenotype description`))+
+  geom_bar() 
+
+
+###
