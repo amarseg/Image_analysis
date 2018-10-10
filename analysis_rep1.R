@@ -4,7 +4,6 @@ library('tidyverse')
 library('broom')
 source('functions_CPA.R')
 dir.create('plots')
-dir.create('output_rep1')
 
 wild_type_path <- '../Analysed_data/wt_data/Nuclei_AR_Solidity_Filtered.csv'
 
@@ -85,8 +84,8 @@ for(file in all_files)
 load('lists.011018.rda')
 gene_list <- stack(out)
 
-area_tib <- bind_rows(areas) 
-pval_tib <- bind_rows(pval) 
+area_tib <- bind_rows(areas)
+pval_tib <- bind_rows(pval)
 
 wt_values <- c('wt',mean_wt,sd_wt, 0, sd_wt/mean_wt, 'wt' )
 
@@ -98,8 +97,7 @@ z_score_tib <- bind_rows(z_scores) %>%
           sd_area = sd_wt, 
           z_score = 0, 
           cv=sd_wt/mean_wt, 
-          ind = 'wt') %>%
-  write_csv('output_rep1/summary_stats_rep1.csv')
+          ind = 'wt')
 
 wt_areas <- wild_type %>%
   select(AreaShape_Area, Well) 
@@ -107,14 +105,13 @@ wt_areas$Metadata_Plate_Name <- 'Wt'
 wt_areas$`Systematic ID` <- 'Wt'
 
 all_areas <- bind_rows(area_tib, wt_areas) %>%
-  left_join(gene_list, by = c('Systematic ID' = 'values')) 
+  left_join(gene_list, by = c('Systematic ID' = 'values'))
+
 all_areas$ind <- as.character(all_areas$ind)
 all_areas[which(all_areas$`Systematic ID` == 'Wt'),]$ind <- 'wt'
-write_csv(all_areas,'output_rep1/cell_areas.csv')
 
 ggplot(z_score_tib, aes(x = mean_area, y = cv, color = ind)) +
   geom_point()
-ggsave('figs/mean_vs_cv.pdf')
 
 only_imp <-all_areas %>%
   filter(!is.na(ind))
@@ -122,5 +119,4 @@ only_imp <-all_areas %>%
 ggplot(only_imp, aes(x=reorder(`Systematic ID`, AreaShape_Area, mean), y = AreaShape_Area, color = ind)) +
   geom_boxplot() +
   ylim(100, 1000)
-ggsave('figs/hits_from_sam_avg_area.pdf')
 
