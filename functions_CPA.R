@@ -77,16 +77,16 @@ load_gene_lists <- function()
 {
   require(tidyverse)
   
-  up_rna <- read_tsv('up_rna.tsv') %>%
+  up_rna <- read_tsv('rna_list_up.txt') %>%
     add_column( type = 'Up RNA')
   
-  down_rna <- read_tsv('down_rna.tsv') %>%
+  down_rna <- read_tsv('rna_list_down.txt') %>%
     add_column( type = 'Down RNA')
   
-  up_prot <- read_tsv('up_prot.tsv') %>%
+  up_prot <- read_tsv('prot_list_up.txt') %>%
     add_column( type = 'Up prot')
   
-  down_prot <- read_tsv('down_prot.tsv') %>%
+  down_prot <- read_tsv('prot_list2_down.txt') %>%
     add_column( type = 'Down prot')
   
   omics_lists <- bind_rows(up_rna, down_rna, up_prot, down_prot) %>%

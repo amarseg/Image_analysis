@@ -4,6 +4,7 @@ library('tidyverse')
 library('broom')
 source('functions_CPA.R')
 dir.create('plots')
+dir.create('output_rep1')
 
 wild_type_path <- '../Analysed_data/wt_data/Nuclei_AR_Solidity_Filtered.csv'
 
@@ -21,7 +22,7 @@ cell_number <- read_csv('../Analysed_data/aug_sept_2018/cell_countsImage.csv') %
 wild_type <- left_join(wild_type, cell_number, by = 'Well') %>%
   filter(ImageQuality_Correlation_DNA_20< 0.5 & ImageQuality_PowerLogLogSlope_DNA > -2.5 & AreaShape_Solidity > 0.9) 
 
-ggplot(wild_type, aes(x = Well_n, y = AreaShape_Area)) +
+ggplot(wild_type, aes(x = Well, y = AreaShape_Area)) +
   geom_boxplot()
 
 mean_wt <- mean(wild_type$AreaShape_Area, trim = 0.1)
@@ -41,7 +42,7 @@ for(file in all_files)
 {
   plate_n <- str_extract(file, pattern = 'Plate[0-9]{1,2}')
   data <- load_filtered_data(file, plate_n = plate_n) %>%
-    left_join(cell_number, by = c('Well' = 'Well','Metadata_Plate_Name') ) %>%
+    left_join(cell_number, by = c('Well' = 'Well','Metadata_Plate_Name','ImageNumber') ) %>%
     filter(ImageQuality_Correlation_DNA_20 < 0.5 & ImageQuality_PowerLogLogSlope_DNA > -2.5 & AreaShape_Solidity > 0.9) 
   
   ggplot(data, aes(x = Well, y = AreaShape_Area)) +
@@ -97,7 +98,8 @@ z_score_tib <- bind_rows(z_scores) %>%
           sd_area = sd_wt, 
           z_score = 0, 
           cv=sd_wt/mean_wt, 
-          ind = 'wt')
+          ind = 'wt') %>%
+  write_csv('output_rep1/summary_stats_rep1.csv')
 
 wt_areas <- wild_type %>%
   select(AreaShape_Area, Well) 
@@ -110,8 +112,12 @@ all_areas <- bind_rows(area_tib, wt_areas) %>%
 all_areas$ind <- as.character(all_areas$ind)
 all_areas[which(all_areas$`Systematic ID` == 'Wt'),]$ind <- 'wt'
 
+write.table(all_areas, 'output_rep1/cell_areas.csv')
+
 ggplot(z_score_tib, aes(x = mean_area, y = cv, color = ind)) +
   geom_point()
+ggsave('figs/mean_vs_cv.pdf')
+
 
 only_imp <-all_areas %>%
   filter(!is.na(ind))
@@ -119,4 +125,5 @@ only_imp <-all_areas %>%
 ggplot(only_imp, aes(x=reorder(`Systematic ID`, AreaShape_Area, mean), y = AreaShape_Area, color = ind)) +
   geom_boxplot() +
   ylim(100, 1000)
+ggsave('figs/hits_from_sam_avg_area.pdf')
 

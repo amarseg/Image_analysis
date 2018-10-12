@@ -1,6 +1,6 @@
 source('functions_CPA.R')
-library(tidyverse)
 library(plyr)
+library(tidyverse)
 library(gridExtra)
 load('lists.011018.rda')
 library(pheatmap)
@@ -163,3 +163,4 @@ ggplot(fypo, aes(x = ind, fill = `Deletion mutant phenotype description`))+
 
 
 ###
+
