@@ -112,7 +112,7 @@ all_areas <- bind_rows(area_tib, wt_areas) %>%
 all_areas$ind <- as.character(all_areas$ind)
 all_areas[which(all_areas$`Systematic ID` == 'Wt'),]$ind <- 'wt'
 
-write.table(all_areas, 'output_rep1/cell_areas.csv')
+write.table(all_areas, 'output_rep1/cell_areas.csv', sep = ',')
 
 ggplot(z_score_tib, aes(x = mean_area, y = cv, color = ind)) +
   geom_point()

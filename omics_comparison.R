@@ -156,11 +156,14 @@ fypo <- read_csv('deletion_phenotypes.csv') %>%
   inner_join(hits_summary, by = c(`Systematic ID`= 'values'))
 
 ggplot(fypo, aes(x = ind, fill = `Phenotypic classification used for analysis`))+
-  geom_bar() 
+  geom_bar() +
+  theme_bw()
+ggsave('figs/fypo_summary.pdf')
 
 ggplot(fypo, aes(x = ind, fill = `Deletion mutant phenotype description`))+
-  geom_bar() 
+  geom_bar() +
+  theme_bw()
+ggsave('figs/deletion_description_phenotype.pdf')
 
-
-###
-
+###intersection of lists
+common_hits <- inner_join(omics_lists, hits_summary, by = c('Systematic ID' = 'values'))
