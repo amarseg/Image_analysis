@@ -152,18 +152,60 @@ ggsave('figs/hip1_omics.pdf')
 
 
 ###phenotype summary
-fypo <- read_csv('deletion_phenotypes.csv') %>%
+jackie_pheno <- read_csv('deletion_phenotypes.csv') %>%
   inner_join(hits_summary, by = c(`Systematic ID`= 'values'))
 
-ggplot(fypo, aes(x = ind, fill = `Phenotypic classification used for analysis`))+
+ggplot(jackie_pheno , aes(x = ind, fill = `Phenotypic classification used for analysis`))+
   geom_bar() +
   theme_bw()
-ggsave('figs/fypo_summary.pdf')
+ggsave('figs/jackie_summary.pdf')
 
-ggplot(fypo, aes(x = ind, fill = `Deletion mutant phenotype description`))+
+ggplot(jackie_pheno , aes(x = ind, fill = `Deletion mutant phenotype description`))+
   geom_bar() +
   theme_bw()
 ggsave('figs/deletion_description_phenotype.pdf')
 
 ###intersection of lists
 common_hits <- inner_join(omics_lists, hits_summary, by = c('Systematic ID' = 'values'))
+
+#######
+#Text mining of the fypo database
+library(tm)
+library(wordcloud)
+
+fypo_db <- fypo_database_loading() %>%
+  inner_join(hits_summary, by = c(`Gene systematic ID` = 'values'))
+
+corpus <- Corpus(VectorSource(fypo_db$Definition))
+corpus <- tm_map(corpus, removeWords, c("cell", "vegetative","increased",'decreased','during','population','viable','normal','growth',
+                                        'sensitivity','morphology','cellular','level','sensitive','with')) 
+
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+dtm <- TermDocumentMatrix(corpus)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+
+findAssocs(dtm, terms = "abnormal", corlimit = 0.1)
+findAssocs(dtm, terms = "resistance", corlimit = 0.1)
+findAssocs(dtm, terms = "carbon", corlimit = 0.1)
+
+termMatrix <- TermDocumentMatrix(corpus)
+
+library(igraph)
+g <- graph.adjacency(termMatrix, weighted=T, mode = 'undirected')
+# remove loops
+g <- simplify(g)
+# set labels and degrees of vertices
+V(g)$label <- V(g)$name
+V(g)$degree <- degree(g)
+
+# set seed to make the layout reproducible
+set.seed(3952)
+layout1 <- layout.fruchterman.reingold(g)
+plot(g, layout=layout1)

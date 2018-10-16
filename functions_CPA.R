@@ -142,3 +142,23 @@ load_omics_data <- function()
   omics_dataset <- bind_rows(final_rna, mean_prot) %>%
     return()
 }
+
+fypo_database_loading <- function()
+{
+  require(tidyverse)
+  require(ontologyIndex)
+  
+  fypo_def <- get_OBO('fypo-simple.obo.txt', propagate_relationships = "is_a", extract_tags = "minimal")
+  
+  fypo_df <- fypo_def$name %>%
+    as.data.frame() %>%
+    rownames_to_column() %>%
+    rename( 'FYPO ID' = 'rowname', 'Definition' = '.')
+  
+  fypo_db <- read_tsv('phenotype_annotations.pombase.phaf') %>%
+    filter(str_detect(`Allele name`, pattern = 'delta')) %>%
+    inner_join(fypo_df, by = 'FYPO ID') %>%
+    select(`Gene systematic ID`,`FYPO ID`,Definition)
+  
+  return(fypo_db)
+}
