@@ -153,7 +153,7 @@ fypo_database_loading <- function()
   fypo_df <- fypo_def$name %>%
     as.data.frame() %>%
     rownames_to_column() %>%
-    rename( 'rowname' = 'FYPO ID', '.' = 'Definition')
+    rename( 'FYPO ID' = 'rowname', 'Definition' = '.')
   
   fypo_db <- read_tsv('phenotype_annotations.pombase.phaf') %>%
     filter(str_detect(`Allele name`, pattern = 'delta')) %>%
