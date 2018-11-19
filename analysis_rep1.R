@@ -3,6 +3,7 @@ rm(list = ls())
 library('tidyverse')
 library('broom')
 source('functions_CPA.R')
+detach(package:plyr)
 dir.create('plots')
 dir.create('output_rep1')
 
@@ -65,11 +66,11 @@ for(file in all_files)
   names(pval)[i] <- plate_n
   
   z_scores[[i]] <- data %>%
-    group_by(`Systematic ID`) %>%
     add_count(`Systematic ID`) %>%
     filter(n > 50) %>%
+    group_by(`Systematic ID`) %>%
     summarise(mean_area = mean(AreaShape_Area, trim = 0.1), sd_area = sd(AreaShape_Area)) %>%
-    mutate(z_score = (mean_area - mean_wt)/sd_wt)
+    mutate(cv = sd_area/mean_area)
 
   
   areas[[i]] <- data %>%
@@ -96,7 +97,6 @@ z_score_tib <- bind_rows(z_scores) %>%
   add_row(`Systematic ID` = 'wt',
           mean_area = mean_wt,
           sd_area = sd_wt, 
-          z_score = 0, 
           cv=sd_wt/mean_wt, 
           ind = 'wt') %>%
   write_csv('output_rep1/summary_stats_rep1.csv')
@@ -122,8 +122,9 @@ ggsave('figs/mean_vs_cv.pdf')
 only_imp <-all_areas %>%
   filter(!is.na(ind))
 
-ggplot(only_imp, aes(x=reorder(`Systematic ID`, AreaShape_Area, mean), y = AreaShape_Area, color = ind)) +
+ggplot(subset(only_imp, ind != 'var'), aes(x=reorder(`Systematic ID`, AreaShape_Area, mean), y = AreaShape_Area, color = ind)) +
   geom_boxplot() +
-  ylim(100, 1000)
-ggsave('figs/hits_from_sam_avg_area.pdf')
+  ylim(100, 1000) +
+  theme(axis.text.x  = element_text(angle=90, vjust=0.5))
+ggsave('figs/hits_from_sam_avg_area.pdf', scale = 2, width = 7, heigh = 7)
 

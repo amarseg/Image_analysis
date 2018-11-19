@@ -1,15 +1,38 @@
 source('functions_CPA.R')
-library(plyr)
 library(tidyverse)
 library(gridExtra)
 load('lists.011018.rda')
 library(pheatmap)
 library(gtools)
 hits_summary <- stack(out)
-
+hits_summary$ind <- as.character(hits_summary$ind)
 ###plot omics hits in the screening data
 area <- read_csv('output_rep1/cell_areas.csv')
-summary <- read_csv('output_rep1/summary_stats_rep1.csv')
+summary <- read_csv('output_rep1/summary_stats_rep1.csv') %>%
+  mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
+  mutate(z_score = (mean_area - all_area)/sd_all) %>%
+  mutate(pvalue = 1-pnorm(abs(z_score))) %>% 
+  mutate(hits = ifelse(pvalue < 0.01, 'hit','no hit'))
+
+summary[which(summary$ind == 'dn'),]$ind <- 'down'
+hits_summary[which(hits_summary$ind == 'dn'),]$ind <- 'down'
+
+only_imp <-area %>%
+  filter(!is.na(ind))
+
+intersect(summary[which(summary$hits == 'hit'),]$`Systematic ID`, summary[which(!is.na(summary$ind)),]$`Systematic ID`)
+
+
+ggplot(only_imp, aes(x=reorder(`Systematic ID`, AreaShape_Area, mean), y = AreaShape_Area, color = ind)) +
+  geom_boxplot() +
+  ylim(100, 1000) +
+  coord_flip()
+ggsave('figs/hits_from_sam_avg_area.pdf', scale = 2)
+
+
+
+ggplot(summary, aes(x = mean_area, y = cv, color = hits)) +
+  geom_point()
 
 omics_lists <- load_gene_lists()
 
@@ -17,7 +40,7 @@ complete_summary <- left_join(summary, omics_lists, by = 'Systematic ID')
 
 ggplot(complete_summary, aes(x = mean_area, y = cv, color = type)) +
   geom_point()
-ggsave('figs/omics_summary.pdf')
+ggsave('figs/omics_summary.pdf', width = 7, height = 7)
 
 
 complete_area <- left_join(area, omics_lists, by = 'Systematic ID') %>%
@@ -86,10 +109,12 @@ all_omics_hits <- left_join(normalised_omics, hits_summary, by = c('ID' = 'value
 
 all_omics_hits$transparency <- ifelse(is.na(all_omics_hits$ind),yes = 0.2, no = 1)
 
-ggplot(all_omics_hits, aes(x = time_point.x, y = log2foldchange, color = ind, alpha = transparency)) +
-  geom_line(data = subset(all_omics_hits, !is.na(ind)),aes(group = interaction(ID,replicate))) +
+ggplot(subset(all_omics_hits, ind == 'up' | ind == 'down'), aes(x = time_point.x, y = log2foldchange, color = ind, alpha = transparency)) +
+  geom_line(aes(group = interaction(ID,replicate))) +
   stat_summary( fun.y=mean, geom="line", colour="black", size = 1.25, linetype = 'dashed') +
-  facet_wrap(~replicate*molecule)
+  facet_wrap(~molecule*ind) +
+  theme_light() +
+  scale_color_manual(values = c('#F8766D','#7CAE00'))
 ggsave('figs/omics_hits.pdf', scale = 2)
 
 
@@ -168,3 +193,24 @@ ggsave('figs/deletion_description_phenotype.pdf')
 ###intersection of lists
 common_hits <- inner_join(omics_lists, hits_summary, by = c('Systematic ID' = 'values'))
 
+
+##########genes high in H3K9me2
+high_transcripts <- read.delim('Z:/Pers_Amalia/chip_ncRNA/methil_genes.txt')
+
+high <- normalised_omics %>%
+  filter(ID %in% high_transcripts[,1] & molecule == 'RNA') %>%
+  group_by(ID, time_point.x) %>%
+  summarise(avg_fold_change = mean(log2foldchange, na.rm = T))
+
+high[is.nan(high$avg_fold_change),]$avg_fold_change <- NA
+high[is.infinite(high$avg_fold_change),]$avg_fold_change <- NA
+
+ggplot(high, aes(x = time_point.x, y = avg_fold_change)) +
+  geom_point( color = 'grey') +
+  geom_line(aes(group = ID), color = 'grey') +
+  stat_summary( fun.y=mean, geom="line", colour="black", size = 1.25, linetype = 'dashed') +
+  theme_bw()
+
+#################
+t <- compareCluster(out, fun = 'enrichKEGG', org = 'spo')
+u <- enrichKEGG(out$var, organism = 'spo')
