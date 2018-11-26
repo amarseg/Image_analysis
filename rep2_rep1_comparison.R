@@ -2,9 +2,12 @@ library('tidyverse')
 source('functions_CPA.R')
 
 rep1 <- c('Z:/Pers_Amalia/Screening/Analysed_data/aug_sept_2018/')
-rep2 <- c('Z:/Pers_Amalia/Screening/Analysed_data/replicate_2/', 'Z:/Pers_Amalia/Screening/Analysed_data/replicate_2_batch_2/')
+rep2 <- c('Z:/Pers_Amalia/Screening/Analysed_data/replicate_2/', 
+          'Z:/Pers_Amalia/Screening/Analysed_data/replicate_2_batch_2/',
+          'Z:/Pers_Amalia/Screening/Analysed_data/batch_3/',
+          'Z:/Pers_Amalia/Screening/Analysed_data/batch_4/')
 
-plates <- c(9:30)
+plates <- c(1:36)
 plates <- paste0('Plate',plates)
 plates <- paste(plates, collapse = '|')
 
@@ -20,7 +23,11 @@ cell_number <- read_csv('../Analysed_data/aug_sept_2018/cell_countsImage.csv') %
   mutate(Proportion_AR_filter = Count_Nuclei_AR_filtered/(Count_Nuclei+Count_Nuclei_AR_filtered), 
          Proportion_solidity_filter = Count_Nuclei_AR_Solidity_Filtered/(Count_Nuclei_AR_filtered+ Count_Nuclei_AR_Solidity_Filtered)) 
 
-cell_number_2 <- read_csv('../Analysed_data/replicate_2/cell_countsImage.csv') %>%
+cell_count_files <- list.files(rep2, full.names = T, recursive = T, pattern = 'cell_countsImage.csv') %>%
+  map(read_csv) %>%
+  reduce(bind_rows)
+
+cell_number_2 <- cell_count_files %>%
   separate(FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
   mutate(Proportion_AR_filter = Count_Nuclei_AR_filtered/(Count_Nuclei+Count_Nuclei_AR_filtered), 
          Proportion_solidity_filter = Count_Nuclei_AR_Solidity_Filtered/(Count_Nuclei_AR_filtered+ Count_Nuclei_AR_Solidity_Filtered))
@@ -60,6 +67,7 @@ for(file in rep1_extract)
 }
 
 areas2 <- list()
+z_scores <- list()
 i = 1
 for(file in rep2_folders)
 {
@@ -72,6 +80,8 @@ for(file in rep2_folders)
     add_count(`Systematic ID`) %>%
     filter(n >=50) %>%
     select(AreaShape_Area,`Systematic ID`,Metadata_Plate_Name, Well)
+  
+  
   i=i+1
 }
 
@@ -79,17 +89,69 @@ areas1_tib <- bind_rows(areas1) %>%
   group_by(`Systematic ID`) %>%
   summarise(mean_area = mean(AreaShape_Area, trim = 0.1))
 
+
+
 areas2_tib <- bind_rows(areas2) %>%
   group_by(`Systematic ID`) %>%
-  summarise(mean_area = mean(AreaShape_Area, trim = 0.1))
+  summarise(mean_area = mean(AreaShape_Area, trim = 0.1)) 
+
+bind_rows(areas2) %>%
+  write_csv('output_rep2/areas_rep2.csv')
 
 all_areas <- inner_join(areas1_tib, areas2_tib, by = 'Systematic ID')
 
 ggplot(all_areas, aes(x = mean_area.x, y = mean_area.y, label = `Systematic ID`)) +
   geom_point() + 
   geom_abline(slope = 1, intercept = 0) +
-  xlim(0,800) +
-  ylim(0,800) +
   ylab('Mean Area replicate 2') +
-  xlab('Mean Area replicate 1')
+  xlab('Mean Area replicate 1') +
+  geom_smooth(method = 'lm')
 
+load('lists.011018.rda')
+hits_summary <- stack(out)
+
+z_score_tib <- bind_rows(areas2) %>%
+  group_by(`Systematic ID`) %>%
+  summarise(mean_area = mean(AreaShape_Area, trim = 0.1), sd_area = sd(AreaShape_Area)) %>%
+  mutate(cv = sd_area/mean_area) %>%
+  left_join(hits_summary, by = c('Systematic ID' = 'values')) %>%
+  write_csv('output_rep2/statistics_rep2.csv')
+
+
+
+ggplot(z_score_tib, aes(x = mean_area, y = cv, color = ind))+
+  geom_point()
+
+top20 <- top_n(z_score_tib, n = 20, mean_area) %>%
+  add_column(position = 'top')
+
+bot20 <- top_n(z_score_tib, n = -20, mean_area) %>%
+  add_column(position = 'bottom') %>%
+  bind_rows(top20)
+
+summary_rep1 <- read_csv('output_rep1/summary_stats_rep1.csv') %>%
+  left_join(bot20, by = 'Systematic ID')
+
+ggplot(subset(summary_rep1, !is.na(position)), aes(x = mean_area.x, y = cv.x, colour = position)) +
+  geom_point()
+
+
+all_areas_id <- all_areas %>%
+  left_join(hits_summary, by = c('Systematic ID' = 'values'))
+
+ggplot(all_areas_id, aes(x = mean_area.x, y = mean_area.y, label = `Systematic ID`, color = ind)) +
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0) +
+  ylab('Mean Area replicate 2') +
+  xlab('Mean Area replicate 1') 
+
+imp_mutants <- filter(all_areas_id, ind == 'dn' | ind == 'up')
+
+###Compare with mahalanobis hits
+maha_hits <- read_csv('output_rep1/maha_hits.csv')
+
+z_score_maha <- z_score_tib %>%
+  left_join(maha_hits, by = 'Systematic ID')
+
+ggplot(z_score_maha, aes(x = mean_area.x, y = cv.x, color = outlier)) +
+  geom_point()

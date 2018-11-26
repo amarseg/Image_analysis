@@ -54,3 +54,12 @@ layout1 <- layout.fruchterman.reingold(g)
 plot(g, layout=layout1, vertex.size=20, 
 vertex.label.color="darkred")
 
+
+source('Z:/Pers_Amalia/SGA_analysis/enrichment_functions.R')
+
+####enrichment######
+
+go_db<-load_go()
+go_enrich <- enricher(out$var, TERM2GENE = go_db$term2gene, TERM2NAME = go_db$term2name)
+dotplot(go_enrich)
+write_csv(as.tibble(go_enrich),path = 'data/enrichment_GO.csv')

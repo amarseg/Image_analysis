@@ -109,12 +109,11 @@ all_omics_hits <- left_join(normalised_omics, hits_summary, by = c('ID' = 'value
 
 all_omics_hits$transparency <- ifelse(is.na(all_omics_hits$ind),yes = 0.2, no = 1)
 
-ggplot(subset(all_omics_hits, ind == 'up' | ind == 'down'), aes(x = time_point.x, y = log2foldchange, color = ind, alpha = transparency)) +
+ggplot(filter(all_omics_hits, !is.na(ind)), aes(x = time_point.x, y = log2foldchange, color = ind, alpha = transparency)) +
   geom_line(aes(group = interaction(ID,replicate))) +
   stat_summary( fun.y=mean, geom="line", colour="black", size = 1.25, linetype = 'dashed') +
   facet_wrap(~molecule*ind) +
-  theme_light() +
-  scale_color_manual(values = c('#F8766D','#7CAE00'))
+  theme_light()
 ggsave('figs/omics_hits.pdf', scale = 2)
 
 
