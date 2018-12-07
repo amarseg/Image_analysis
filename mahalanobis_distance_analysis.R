@@ -11,7 +11,7 @@ summary_stats <- add_column(summary_stats, maha_dist = mahalanobis(summary_stats
                                      center = colMeans(summary_stats[,c('mean_area','cv')]),
                                      cov = cov(summary_stats[,c('mean_area','cv')])))
 
-pval_thr <- 0.99
+pval_thr <- 0.95
 t <- sqrt(-2*log(1-pval_thr))
 
 summary_stats <- add_column(summary_stats, outlier = ifelse(summary_stats$maha_dist > t, 'yes','no'))

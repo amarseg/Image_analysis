@@ -4,12 +4,12 @@ load_CPA_data <- function(per_object_data, per_image_data, plate_n)
   object_data <- read_csv(per_object_data)
   well_data <- 
     read_csv(per_image_data) %>%
-    select(ImageNumber, Image_Metadata_QCFlag,Image_FileName_DNA) %>%
+    dplyr::select(ImageNumber, Image_Metadata_QCFlag,Image_FileName_DNA) %>%
     separate(Image_FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
     transform(Well_n = str_sub(Well_n, start = 5, end = 7))
   
  strain_data <- read_csv('../Imaging_code/library_strains.csv') %>%
-   select('Ver5.0 position','Systematic ID') %>%
+   dplyr::select('Ver5.0 position','Systematic ID') %>%
    separate('Ver5.0 position', into = c('Version','Plate','Well')) %>%
    filter(Plate == plate_n)
   
@@ -23,7 +23,7 @@ load_filtered_data <- function(csv_path, plate_n)
   require(tidyverse)
   
   strain_data <- read_csv('library_strains.csv') %>%
-    select(`Ver5.0 position`,`Systematic ID`) %>%
+    dplyr::select(`Ver5.0 position`,`Systematic ID`) %>%
     separate(`Ver5.0 position`, into = c('Version','Plate','Well')) %>%
     mutate(Plate = str_extract(Plate, pattern = '[:digit:]{2}')) %>%
     mutate(Plate = paste0('Plate',as.numeric(Plate)), Well = as.numeric(Well)) %>%
@@ -42,7 +42,7 @@ load_filtered_data <- function(csv_path, plate_n)
 plot_cell_proportion <- function(cell_count_data, bad_well_thr = 0.2)
 {
   proportions <- cell_count_data %>%
-    select(Count_Nuclei, Count_Nuclei_AR_filtered, Count_Nuclei_AR_Solidity_Filtered, FileName_DNA, Metadata_Plate_Name) %>%
+    dplyr::select(Count_Nuclei, Count_Nuclei_AR_filtered, Count_Nuclei_AR_Solidity_Filtered, FileName_DNA, Metadata_Plate_Name) %>%
     separate(FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
     mutate(Proportion_AR_filter = Count_Nuclei_AR_filtered/(Count_Nuclei+Count_Nuclei_AR_filtered), 
            Proportion_solidity_filter = Count_Nuclei_AR_Solidity_Filtered/(Count_Nuclei_AR_filtered+ Count_Nuclei_AR_Solidity_Filtered))
@@ -59,7 +59,7 @@ plot_cell_proportion <- function(cell_count_data, bad_well_thr = 0.2)
     facet_wrap(~plate_name)
   
   bad_wells <- filter(proportions, Proportion_solidity_filter < 0.2) %>%
-    select(plate_name, Well, Picture) %>%
+    dplyr::select(plate_name, Well, Picture) %>%
     return()
   
 }
@@ -102,7 +102,7 @@ load_omics_data <- function()
   #RNa procesing
   rna <- read_csv('rna_seq.csv') 
   size_factors <- rna %>%
-    select(-ID) %>%
+    dplyr::select(-ID) %>%
     estimateSizeFactorsForMatrix()
   
   rna[,-1] <- sweep(rna[,-1],MARGIN=2,FUN="/",STATS=size_factors) %>%
@@ -111,7 +111,7 @@ load_omics_data <- function()
   final_rna <- rna %>%
     gather(key = sample_name, value  = read_number, -ID) %>%
     separate(sample_name, into = c('not needed','time_point','replicate'), sep = '_') %>%
-    select(-`not needed`) %>%
+    dplyr::select(-`not needed`) %>%
     mutate(time_point = str_extract(time_point, pattern = '[:digit:]{1,2}')) %>%
     mutate(replicate = str_extract(replicate, pattern = '[:digit:]{1}')) %>%
     add_column(molecule = 'RNA')
@@ -119,14 +119,14 @@ load_omics_data <- function()
   
   #Protein procesing
   prot <- read_delim('SQ_Results_PROTEIN.tsv', delim = '\t') %>%
-    select(proteinName, b018p004AM_T0_01:b018p004AM_T11_G3_02) %>%
+    dplyr::select(proteinName, b018p004AM_T0_01:b018p004AM_T11_G3_02) %>%
     filter(str_detect(proteinName, pattern = 'SP')) %>%
     gather(key = sample_name, value = read_number, -proteinName) %>%
     separate(sample_name, into = c('no','time_point','replicate','technical_replicate'), sep = '_') %>%
     separate(proteinName, into = c('ID','gene_name','chr','desc'), sep = '\\|') %>%
     mutate(time_point = str_extract(time_point, pattern = '[:digit:]{1,2}')) %>%
     mutate(replicate = str_extract(replicate, pattern = '[:digit:]{1}')) %>%
-    select(-(gene_name:desc), -no) %>%
+    dplyr::select(-(gene_name:desc), -no) %>%
     add_column(molecule = 'Protein')
   
   t <- prot[which(is.na(prot$technical_replicate)),]
@@ -158,7 +158,7 @@ fypo_database_loading <- function()
   fypo_db <- read_tsv('phenotype_annotations.pombase.phaf') %>%
     filter(str_detect(`Allele name`, pattern = 'delta')) %>%
     inner_join(fypo_df, by = 'FYPO ID') %>%
-    select(`Gene systematic ID`,`FYPO ID`,Definition)
+    dplyr::select(`Gene systematic ID`,`FYPO ID`,Definition)
   
   return(fypo_db)
 }

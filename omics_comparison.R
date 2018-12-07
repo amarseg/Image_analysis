@@ -12,7 +12,7 @@ summary <- read_csv('output_rep1/summary_stats_rep1.csv') %>%
   mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
   mutate(z_score = (mean_area - all_area)/sd_all) %>%
   mutate(pvalue = 1-pnorm(abs(z_score))) %>% 
-  mutate(hits = ifelse(pvalue < 0.01, 'hit','no hit'))
+  mutate(hits = ifelse(pvalue < 0.1, 'hit','no hit')) 
 
 summary[which(summary$ind == 'dn'),]$ind <- 'down'
 hits_summary[which(hits_summary$ind == 'dn'),]$ind <- 'down'
@@ -23,7 +23,7 @@ only_imp <-area %>%
 intersect(summary[which(summary$hits == 'hit'),]$`Systematic ID`, summary[which(!is.na(summary$ind)),]$`Systematic ID`)
 
 
-ggplot(only_imp, aes(x=reorder(`Systematic ID`, AreaShape_Area, mean), y = AreaShape_Area, color = ind)) +
+ggplot(summary, aes(x=reorder(`Systematic ID`, AreaShape_Area, mean), y = AreaShape_Area, color = hits)) +
   geom_boxplot() +
   ylim(100, 1000) +
   coord_flip()
@@ -33,12 +33,13 @@ ggsave('figs/hits_from_sam_avg_area.pdf', scale = 2)
 
 ggplot(summary, aes(x = mean_area, y = cv, color = hits)) +
   geom_point()
+ggsave('hits_rep1.pdf')
 
 omics_lists <- load_gene_lists()
 
 complete_summary <- left_join(summary, omics_lists, by = 'Systematic ID')
 
-ggplot(complete_summary, aes(x = mean_area, y = cv, color = type)) +
+ggplot(complete_summary, aes(x = mean_area, y = cv, color = hits)) +
   geom_point()
 ggsave('figs/omics_summary.pdf', width = 7, height = 7)
 
@@ -213,3 +214,22 @@ ggplot(high, aes(x = time_point.x, y = avg_fold_change)) +
 #################
 t <- compareCluster(out, fun = 'enrichKEGG', org = 'spo')
 u <- enrichKEGG(out$var, organism = 'spo')
+
+##############################same with second replicate######################
+area2 <- read_csv('output_rep2/areas_rep2.csv')
+summary2 <- read_csv('output_rep2/statistics_rep2.csv') %>%
+  mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
+  mutate(z_score = (mean_area - all_area)/sd_all) %>%
+  mutate(pvalue = 1-pnorm(abs(z_score))) %>% 
+  mutate(hits = ifelse(pvalue < 0.1, 'hit','no hit'))
+
+ggplot(summary2, aes(x = mean_area, y = cv, color = hits)) +
+  geom_point() +
+  ylim(0.25,3)
+ggsave('hits_rep2.pdf')
+
+hits1 <- filter(summary, hits == 'hit')
+hits2 <- filter(summary2, hits == 'hit')
+
+common_hits <- intersect(hits1$`Systematic ID`, hits2$`Systematic ID`) %>%
+  write.csv('common_hits_z_Score.csv')
