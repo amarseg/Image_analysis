@@ -2,3 +2,15 @@
 .Rhistory
 .RData
 .Ruserdata
+
+/Plots
+/figs
+
+*.phaf
+*.phaf.gz
+*.csv
+*.xlsx
+*.tsv
+*.txt
+*.dat
+*.pdf

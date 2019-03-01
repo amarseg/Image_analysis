@@ -141,6 +141,8 @@ load_omics_data <- function()
   
   omics_dataset <- bind_rows(final_rna, mean_prot) %>%
     return()
+  
+  write_csv(omics_dataset, 'tidy_omics.csv')
 }
 
 fypo_database_loading <- function()
@@ -161,4 +163,24 @@ fypo_database_loading <- function()
     dplyr::select(`Gene systematic ID`,`FYPO ID`,Definition)
   
   return(fypo_db)
+}
+
+load_go <- function(){
+  require(AnnotationDbi)
+  require(GO.db)
+  
+  go_data <- read_delim('ftp://ftp.pombase.org/pombe/annotations/Gene_ontology/gene_association.pombase.gz',
+                        skip = 44, delim = '\t', col_names = F)
+  term2gene <- go_data[,c(5,2)]
+  
+  term2name <- AnnotationDbi::select(GO.db, keys = keys(GO.db), columns = c('GOID','TERM'))
+  
+  go_database <- list(term2gene = term2gene, term2name = term2name)
+  return(go_database)
+}
+
+load_angeli_for_fgsea <- function(){
+  require(tidyverse)
+  
+  angeli_data <- read_delim('AnGeLiDatabase.txt', delim = '\t')
 }

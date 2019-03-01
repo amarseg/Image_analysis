@@ -12,7 +12,15 @@ summary <- read_csv('output_rep1/summary_stats_rep1.csv') %>%
   mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
   mutate(z_score = (mean_area - all_area)/sd_all) %>%
   mutate(pvalue = 1-pnorm(abs(z_score))) %>% 
-  mutate(hits = ifelse(pvalue < 0.1, 'hit','no hit')) 
+  mutate(hits = ifelse(pvalue < 0.1, 'hit','no hit')) %>%
+  write_csv('output_rep1/summary_rep1_pval.csv')
+
+summary_2 <- read_csv('output_rep1/summary_stats_rep1.csv') %>%
+  mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
+  mutate(z_score = (mean_area - all_area)/sd_all) %>%
+  mutate(pvalue = 1-pnorm(abs(z_score))) %>% 
+  mutate(hits = ifelse(pvalue < 0.15, 'hit','no hit')) %>%
+  write_csv('output_rep1/summary_rep1_pval_0.15.csv')
 
 summary[which(summary$ind == 'dn'),]$ind <- 'down'
 hits_summary[which(hits_summary$ind == 'dn'),]$ind <- 'down'
@@ -217,11 +225,20 @@ u <- enrichKEGG(out$var, organism = 'spo')
 
 ##############################same with second replicate######################
 area2 <- read_csv('output_rep2/areas_rep2.csv')
+
 summary2 <- read_csv('output_rep2/statistics_rep2.csv') %>%
   mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
   mutate(z_score = (mean_area - all_area)/sd_all) %>%
   mutate(pvalue = 1-pnorm(abs(z_score))) %>% 
-  mutate(hits = ifelse(pvalue < 0.1, 'hit','no hit'))
+  mutate(hits = ifelse(pvalue < 0.1, 'hit','no hit')) %>%
+  write_csv('output_rep2/statistics_rep2_pvalue.csv')
+
+summary2_2 <- read_csv('output_rep2/statistics_rep2.csv') %>%
+  mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
+  mutate(z_score = (mean_area - all_area)/sd_all) %>%
+  mutate(pvalue = 1-pnorm(abs(z_score))) %>% 
+  mutate(hits = ifelse(pvalue < 0.15, 'hit','no hit')) %>%
+  write_csv('output_rep2/statistics_rep2_pvalue_0.15.csv')
 
 ggplot(summary2, aes(x = mean_area, y = cv, color = hits)) +
   geom_point() +
@@ -232,4 +249,18 @@ hits1 <- filter(summary, hits == 'hit')
 hits2 <- filter(summary2, hits == 'hit')
 
 common_hits <- intersect(hits1$`Systematic ID`, hits2$`Systematic ID`) %>%
-  write.csv('common_hits_z_Score.csv')
+  write_csv('common_hits_z_Score.csv')
+
+############################Find extra hits when changing pvalue##############################
+
+common_hits_2 <- inner_join(summary_2, summary2_2, by = 'Systematic ID', suffix = c('_rep1','_rep2')) %>%
+  filter(hits_rep1 == 'hit'& hits_rep2 == 'hit')
+
+library_strains <- read_csv('library_strains.csv') %>%
+  select(`Ver5.0 position`,`Systematic ID`) %>%
+  separate(`Ver5.0 position`, into = c('Version','Plate','Position'),sep = '-') %>%
+  transform(Plate = as.numeric(str_sub(.$Plate, start = 2, end = 3)))
+
+not_on_1st <- filter(common_hits_2, !(`Systematic ID` %in% common_hits)) %>%
+  inner_join(library_strains, by = c('Systematic ID'= 'Systematic.ID')) %>%
+  write_csv('second_list_of_hits.csv')
