@@ -5,6 +5,7 @@
 
 /Plots
 /figs
+/output_live_imaging
 
 *.phaf
 *.phaf.gz
