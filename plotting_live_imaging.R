@@ -3,7 +3,7 @@ library(tidyverse)
 library('nlme')
 library('broom')
 all_data <- read_csv('all_live_imaging_data.csv') %>%
-  filter(Area > 500)
+  filter(Area > 500 & aspect_ratio > 1.5 & Solidity > 0.8)
 
 ggplot(all_data, aes(x = aspect_ratio)) +
   geom_histogram()
@@ -12,7 +12,7 @@ ggplot(all_data, aes(x = Solidity)) +
   geom_histogram()
 
 as_filter <- all_data %>%
-  #filter(aspect_ratio > 1.5 & Solidity > 0.9) %>%
+  filter(aspect_ratio > 1.5 & Solidity > 0.8) %>%
   group_by(`Systematic ID`,Time, Well) %>%
   summarise(mean_area = mean(Area),
             median_area = median(Area),
@@ -21,7 +21,7 @@ as_filter <- all_data %>%
             plate = unique(plate)) 
 
 test_gene <- all_data %>%
-  filter((`Systematic ID` == 'SPCC285.17' | `Systematic ID` == 'SPCC18B5.09c') & Time <12)
+  filter((`Systematic ID` == 'SPCC285.17' | `Systematic ID` == 'SPCC18B5.09c') & Time < 12)
 
 
 ggplot(test_gene, aes(x = Time, y = log2(Area), group = interaction(Time, `Systematic ID`), color = `Systematic ID`)) +
@@ -94,9 +94,9 @@ all_data_annotated[which(all_data_annotated$size == 'wt'),]$color <- 'brown'
 all_data_annotated <- all_data_annotated %>%
   filter(Time < 12)
 
-for (id in unique(as_filter$`Systematic ID`))
+for (id in unique(all_data_annotated$`Systematic ID`))
 {
-  data <- subset(as_filter, `Systematic ID` == id)
+  data <- subset(all_data_annotated, `Systematic ID` == id)
   
   file_name = paste0('output_live_imaging/',id,'.jpg')
   

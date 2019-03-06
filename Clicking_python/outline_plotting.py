@@ -13,7 +13,7 @@ from skimage.segmentation import clear_border
 from skimage.morphology import closing, square
 from skimage.color import label2rgb
 
-path = sys.argv[1] 
+path = sys.argv[1]
 input_images = os.listdir(path+'/masks')
 all_dfs = []
 for image_name in input_images:
@@ -34,6 +34,7 @@ for image_name in input_images:
 		length.append(region.major_axis_length)
 		width.append(region.minor_axis_length)
 		solidity.append(region.solidity)
+		centroid.apped(region.centroid)
 	image_df = pd.DataFrame(
 		{'Image_name':image_name,
 		'Area':area,
