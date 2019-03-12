@@ -11,6 +11,12 @@ ggplot(all_data, aes(x = aspect_ratio)) +
 ggplot(all_data, aes(x = Solidity)) +
   geom_histogram()
 
+
+t <- all_data %>%
+  group_by(Well, Position) %>%
+  summarise(mean_area = mean(Area))
+
+
 as_filter <- all_data %>%
   filter(aspect_ratio > 1.5 & Solidity > 0.8) %>%
   group_by(`Systematic ID`,Time, Well) %>%

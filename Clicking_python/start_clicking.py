@@ -28,7 +28,7 @@ masks_path = r'Z:\Pers_Amalia\Screening\clicking_test\masks'
 #Label outlines and get coordinates and shit
 home = os.getenv("HOME")
 #masks_img = glob.glob(masks_path + '//*//*.tiff')
-masks_img = [r'/mnt/quantex/Pers_Amalia/Screening/clicking_test/masks/dir_194/F3--W00063--P00007--Z00000--T00000--Blank.tif']
+masks_img = [r'/mnt/quantex/Pers_Amalia/Screening/clicking_test/masks/dir_194/F3--W00063--P00007--Z00000--T00003--Blank.tif']
 
 all_dfs = []
 
