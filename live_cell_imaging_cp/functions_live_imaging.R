@@ -56,10 +56,7 @@ image_data <- read_csv('../olaf_cell_profiler/output/cell_countsImage.csv')
 
 all_data <- left_join(data, image_data, by = c('FileName' = 'FileName_DNA',
                                                'Metadata_Plate_Name')) %>%
-  filter(Metadata_QCFlag.y == 0 
-         & ImageQuality_Correlation_DNA_20 < 0.5 
-         & ImageQuality_PowerLogLogSlope_DNA > -2.5 
-         & AreaShape_Solidity > 0.9) %>%
+  filter(Metadata_QCFlag.y == 0) %>%
   mutate(Time = str_extract(FileName, pattern = 'T0000[0-6]')) %>%
   mutate(Time = as.numeric(str_sub(Time, start = 5, end = 6))) %>%
   separate(FileName, into = c('Well','Well_n','Position','Z_axis','Time','Type'), sep = '--') %>%
@@ -72,7 +69,20 @@ all_data <- left_join(data, image_data, by = c('FileName' = 'FileName_DNA',
                                     'Time' = 'T',
                                     'Metadata_Plate_Name' = 'plate')) %>%
   left_join(join_strain_data, by = c('Well' = '96_well',
-                                     'Metadata_Plate_Name' = 'plate'))
+                                     'Metadata_Plate_Name' = 'plate')) %>%
+  filter()
 
 all_data[rowSums(is.na(all_data))>1,]$`Systematic ID` <- 'wt'
 write_csv(all_data, 'live_cell_imaging_cp/output_data_cleaned.csv')
+
+
+###################Plot Image data##########################
+proc_image_data <- image_data %>%
+  separate(FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
+  select(Well, Picture, ImageQuality_Correlation_DNA_20:Metadata_Plate_Name) %>%
+  gather(key = variable, value = parameter_value, - Well, -Metadata_Plate_Name, -Picture)
+
+
+ggplot(proc_image_data, aes(x = parameter_value )) +
+  geom_histogram() + 
+  facet_wrap(~variable, scales = 'free') 

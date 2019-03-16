@@ -51,14 +51,14 @@ join_time_stamp <- bind_rows(time_stamp, time_stamp2)
 
 ################Load strain data#################
 
-strain_data <- read_csv('out.csv') %>%
+strain_data <- read_csv('live_cell_imaging_cp/out.csv') %>%
   select(`Systematic ID`,`96_well`) %>%
   add_column(plate = 'plate1') 
 
 strain_data <- strain_data[mixedorder(strain_data$`96_well`),] %>%
   rownames_to_column()
 
-strain_data2 <- read_csv('out2.csv') %>%
+strain_data2 <- read_csv('live_cell_imaging_cp/out2.csv') %>%
   select(`Systematic ID`,`96_well`) %>%
   add_column(plate = 'plate2')
   
