@@ -3,8 +3,12 @@
 .RData
 .Ruserdata
 
+/live_cell_imaging_cp/*.csv
+/live_cell_imaging_cp/*.pdf
+/live_cell_imaging_cp/figures/
+
 /Plots
-/figs
+/figs/*.pdf
 /output_live_imaging
 
 *.phaf

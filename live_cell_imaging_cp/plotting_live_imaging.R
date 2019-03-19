@@ -4,7 +4,7 @@ wt_data <- read_csv('live_cell_imaging_cp/output_data_cleaned.csv') %>%
   filter(ImageQuality_PowerLogLogSlope_DNA > -1 & ImageQuality_Correlation_DNA_20 > 0.25) %>%
   filter(`Systematic ID` == 'wt' & Time < 4 )
 
-ggplot(all_data, aes(x = Time, y = AreaShape_Area, group = `Systematic ID`)) +
+ggplot(wt_data, aes(x = Time, y = AreaShape_Area, group = `Systematic ID`)) +
   geom_point() +
   stat_summary(fun.y = 'mean', color = 'red', geom = 'line') +
   facet_grid(~Well)
@@ -41,9 +41,17 @@ for(id in unique(all_data_annotated$`Systematic ID`))
   
   file_name = paste0('live_cell_imaging_cp/figures/',id, '.jpg')
   
-  boxplot(log2(AreaShape_Area) ~ Time, data = sub_id, col = unique(sub_id$color), outline = F)
+  boxplot(log2(AreaShape_Area) ~ Time, data = sub_id, col = unique(sub_id$color))
   dev.copy(jpeg,filename = file_name)
   dev.off()
+  
+  ggplot(sub_id, aes(x = Time, y = log2(AreaShape_Area), group = Time)) +
+    geom_violin() +
+    stat_summary(fun.y = 'median', geom = 'point') +
+    stat_summary(fun.y = 'median', geom = 'line')
+    
+  file_name = paste0('live_cell_imaging_cp/figures/',id,'_violin.jpg')
+  ggsave(file_name)
 }
 
 ##############Plot track data#################
@@ -51,6 +59,9 @@ for(id in unique(all_data_annotated$`Systematic ID`))
 track_data <- read_csv('live_cell_imaging_cp/track_cell_data.csv') %>%
   filter(cell_n != 0) %>%
   left_join( hits, by = 'Systematic ID') 
+
+track_data[track_data$`Systematic ID`=='wt',]$size <- 'wt'
+
 
 ggplot(track_data, aes(x = TIME, y = AreaShape_Area, group = interaction(Position, cell_n))) +
   geom_line()+
@@ -72,5 +83,8 @@ for (id in unique(track_data$`Systematic ID`))
 #############Plot summary of different strains################
 sum_track <- track_data %>%
   group_by(`Systematic ID`, Time) %>%
-  summarise(avg_area = median(AreaShape_Area), avg_time = mean(TIME))
+  summarise(avg_area = median(AreaShape_Area), avg_time = mean(TIME), size = unique(size))
 
+ggplot(sum_track, aes(x = avg_time, y = log2(avg_area), group = `Systematic ID`)) +
+  geom_line() +
+  facet_grid(~size) 
