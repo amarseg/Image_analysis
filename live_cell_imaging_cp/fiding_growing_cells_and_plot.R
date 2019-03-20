@@ -42,7 +42,7 @@ for (id in unique(all_data$ID))
 
 ############Is the screening confirmed? ######
 
-annot_data <- read_csv('z_score_hits.csv')
+annot_data <- read_csv('final_hit_list.csv')
 
 annot_slopes <- slopes %>%
   left_join(annot_data, by = c('ID'= 'Systematic ID'))
@@ -98,3 +98,4 @@ for (id in unique(track_data$ID))
   file_name = paste0('live_cell_imaging_cp/figures/track_regression/',id,'.jpg')
   ggsave(file_name)
 }
+
