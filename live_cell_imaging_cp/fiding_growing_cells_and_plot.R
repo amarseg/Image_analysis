@@ -54,8 +54,8 @@ ggplot(filter(annot_slopes, term == 'Time'), aes(estimate, fill = size)) +
   geom_histogram(position = 'dodge')
 
 annot_slopes$slope_res <- NA 
-annot_slopes[which(annot_slopes$estimate > 25 & annot_slopes$term == 'Time'),]$slope_res <- 'positive'
-annot_slopes[which(annot_slopes$estimate < 25 & annot_slopes$term == 'Time'),]$slope_res <- 'negative'
+annot_slopes[which(annot_slopes$estimate > 10 & annot_slopes$term == 'Time'),]$slope_res <- 'positive'
+annot_slopes[which(annot_slopes$estimate < 10 & annot_slopes$term == 'Time'),]$slope_res <- 'negative'
 
 
 output_res <- annot_slopes %>%
@@ -98,4 +98,15 @@ for (id in unique(track_data$ID))
   file_name = paste0('live_cell_imaging_cp/figures/track_regression/',id,'.jpg')
   ggsave(file_name)
 }
+
+
+##############Create barplot to summarise results
+res <- read_csv('live_cell_imaging_cp/movie_results.csv') 
+
+res[which(size == NA)]
+
+ggplot(filter(res, size != 'wt'), aes(x = size, fill = slope_res)) +
+  geom_bar()
+
+###################Plot Maximal cell size
 
