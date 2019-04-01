@@ -8,14 +8,14 @@ hits_summary <- stack(out)
 hits_summary$ind <- as.character(hits_summary$ind)
 ###plot omics hits in the screening data
 area <- read_csv('output_rep1/cell_areas.csv')
-summary <- read_csv('output_rep1/summary_stats_rep1.csv') %>%
+summary <- read_csv('output_rep1/statistics_rep1_good.csv') %>%
   mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
   mutate(z_score = (mean_area - all_area)/sd_all) %>%
   mutate(pvalue = 1-pnorm(abs(z_score))) %>% 
   mutate(hits = ifelse(pvalue < 0.1, 'hit','no hit')) %>%
   write_csv('output_rep1/summary_rep1_pval.csv')
 
-summary_2 <- read_csv('output_rep1/summary_stats_rep1.csv') %>%
+summary_2 <- read_csv('output_rep1/statistics_rep1_good.csv') %>%
   mutate(all_area = mean(mean_area), sd_all = sd(mean_area)) %>%
   mutate(z_score = (mean_area - all_area)/sd_all) %>%
   mutate(pvalue = 1-pnorm(abs(z_score))) %>% 

@@ -110,7 +110,16 @@ ggplot(all_areas, aes(x = mean_area.x, y = mean_area.y, label = `Systematic ID`)
 load('lists.011018.rda')
 hits_summary <- stack(out)
 
-z_score_tib <- bind_rows(areas2) %>%
+
+z_score_tib <- bind_rows(areas1) %>%
+  group_by(`Systematic ID`) %>%
+  summarise(mean_area = mean(AreaShape_Area, trim = 0.1), sd_area = sd(AreaShape_Area)) %>%
+  mutate(cv = sd_area/mean_area) %>%
+  left_join(hits_summary, by = c('Systematic ID' = 'values')) %>%
+  write_csv('output_rep1/statistics_rep1_good.csv')
+
+
+z_score_tib2 <- bind_rows(areas2) %>%
   group_by(`Systematic ID`) %>%
   summarise(mean_area = mean(AreaShape_Area, trim = 0.1), sd_area = sd(AreaShape_Area)) %>%
   mutate(cv = sd_area/mean_area) %>%

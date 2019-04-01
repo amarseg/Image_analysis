@@ -2,7 +2,7 @@ library(tidyverse)
 
 all_data <- read_csv('live_cell_imaging_cp/output_data_cleaned.csv') %>%
   rename('ID' = `Systematic ID`) %>%
-  filter(Time < 4) %>%
+  #filter(Time < 4) %>%
   group_by(ID, Time) %>%
   summarise(avg_area = median(AreaShape_Area))
 

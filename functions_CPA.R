@@ -8,7 +8,7 @@ load_CPA_data <- function(per_object_data, per_image_data, plate_n)
     separate(Image_FileName_DNA, into = c('Well','Well_n','Picture','Z_axis','Time','Type'), sep = '--') %>%
     transform(Well_n = str_sub(Well_n, start = 5, end = 7))
   
- strain_data <- read_csv('../Imaging_code/library_strains.csv') %>%
+ strain_data <- read_csv('library_strains.csv') %>%
    dplyr::select('Ver5.0 position','Systematic ID') %>%
    separate('Ver5.0 position', into = c('Version','Plate','Well')) %>%
    filter(Plate == plate_n)

@@ -101,6 +101,10 @@ z_score_tib <- bind_rows(z_scores) %>%
           ind = 'wt') %>%
   write_csv('output_rep1/summary_stats_rep1.csv')
 
+dup_ids <- z_score_tib[duplicated(z_score_tib$`Systematic ID`),]$`Systematic ID`
+t <- filter(z_score_tib, `Systematic ID` %in% dup_ids)
+
+
 wt_areas <- wild_type %>%
   select(AreaShape_Area, Well) 
 wt_areas$Metadata_Plate_Name <- 'Wt'
