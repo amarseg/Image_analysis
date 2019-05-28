@@ -21,4 +21,5 @@ strain_data <- read_csv('library_strains.csv') %>%
 
 hits_i_guess <- all_things %>%
   filter(hits_rep1 == 'hit' & hits_rep2 == 'hit') %>%
-  inner_join(strain_data, by = 'Systematic ID')
+  inner_join(strain_data, by = 'Systematic ID') %>%
+  write_csv('live_cell_imaging_cp/hits_i_guess.csv')

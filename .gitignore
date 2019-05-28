@@ -8,7 +8,7 @@
 /live_cell_imaging_cp/figures/
 
 /Plots
-/figs/*.pdf
+/figs
 /output_live_imaging
 
 *.phaf
