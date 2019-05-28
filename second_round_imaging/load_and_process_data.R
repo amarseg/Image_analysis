@@ -48,13 +48,12 @@ for(file in file_list)
   i<- i+1 
 }
 
-data <- bind_rows(all_data) %>%
-  select(-Metadata_FileLocation,-Metadata_Folder, -Metadata_Position,
-         -Metadata_Well, -Metadata_WellNumber) %>%
-  write_csv('second_round_imaging/tidy_results.csv')
+strain_code <- read_csv('second_round_imaging/strain_code.csv') %>%
+  select(`Systematic ID`,`96 blah`)
 
 data <- bind_rows(all_data) %>%
   select(-Metadata_FileLocation,-Metadata_Folder, -Metadata_Position,
          -Metadata_Well, -Metadata_WellNumber) %>%
+  left_join(strain_code, by = c('Well' = '96 blah')) %>%
   filter(Time < time_thr) %>%
   write_csv('second_round_imaging/small_tidy_results.csv')
