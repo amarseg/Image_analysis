@@ -1,0 +1,51 @@
+---
+title: "analysis second round of imaging"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup}
+library(tidyverse)
+library(here)
+library(heatmaply)
+library(pheatmap)
+```
+
+First, we load the data. To produce the small tidy table, run the load and process data script in Olaf. The data is aprox. 8 Gb and can't be loaded into memory in my laptop at least.
+
+```{r}
+# # k = 1
+# j = 1
+# todo = list()
+# columns_i_like <- c(4,7,36,39,62,63)
+# for(i in round(seq(1,4098628, length.out = 1000),0))
+# {
+#   
+#   todo[[k]] <- read.csv(here('second_round_imaging','small_tidy_results.csv'), nrow = 10000, skip =i, header = FALSE)[, columns_i_like]
+#   print(i)
+#   k = k+1
+# }
+
+screen_data <- read_delim(here('second_round_imaging','extract_tidy.txt'), delim = ' ')
+
+sum_data <- screen_data %>%
+  group_by(Systematic, Time) %>%
+  summarise(mean_size = median(AreaShape_Area)) %>%
+  spread(key = Time, value = mean_size)
+
+heatmap_data <- pheatmap(sum_data[,-1], cluster_cols = F, labels_row = sum_data$Systematic, cutree_rows = 4)
+```
+
+Analyse the clusters from the heatmap using clusterprofiler
+
+```{r}
+library(clusterProfiler)
+
+cut_tree <- cutree(heatmap_data$tree_row, k = 4)
+
+clusters <- tibble(ID = sum_data$Systematic, cl = cut_tree) %>%
+  write_csv(here('second_round_imaging','clusters_Area.csv'))
+
+ck <- compareCluster(data = clusters, ID ~ cl, fun = 'enrichKEGG', org = 'spo')
+```
