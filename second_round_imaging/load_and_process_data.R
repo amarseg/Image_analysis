@@ -55,6 +55,6 @@ data <- bind_rows(all_data) %>%
   select(-Metadata_FileLocation,-Metadata_Folder, -Metadata_Position,
          -Metadata_Well, -Metadata_WellNumber) %>%
   left_join(strain_code, by = c('Well' = 'Real_well',
-                                'Metadata_Plate_Name' = 'Plate_name')) %>%
+                               'Metadata_Plate_Name' = 'Plate_name')) %>%
   filter(Time < time_thr) %>%
   write_csv('second_round_imaging/small_tidy_results.csv')

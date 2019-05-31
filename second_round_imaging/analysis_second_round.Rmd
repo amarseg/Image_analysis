@@ -29,12 +29,20 @@ First, we load the data. To produce the small tidy table, run the load and proce
 
 screen_data <- read_delim(here('second_round_imaging','extract_tidy.txt'), delim = ' ')
 
-sum_data <- screen_data %>%
-  group_by(Systematic, Time) %>%
-  summarise(mean_size = median(AreaShape_Area)) %>%
-  spread(key = Time, value = mean_size)
+ggplot(screen_data, aes(AreaShape_Solidity)) +
+  geom_histogram()
 
-heatmap_data <- pheatmap(sum_data[,-1], cluster_cols = F, labels_row = sum_data$Systematic, cutree_rows = 4)
+sum_data <- screen_data %>%
+  unite(new_id, c('Well','Metadata_Plate_Name','Systematic')) %>%
+  filter(AreaShape_Solidity > 0.8) %>%
+  group_by(new_id, Time) %>%
+  summarise(mean_size = median(AreaShape_Area)) %>%
+  spread(key = Time, value = mean_size) %>%
+  write_csv(here('second_round_imaging','median_data.csv'))
+
+heatmap_data <- pheatmap(sum_data[,-1], cluster_cols = F, labels_row = sum_data$new_id, cutree_rows = 4)
+
+
 ```
 
 Analyse the clusters from the heatmap using clusterprofiler
@@ -47,5 +55,27 @@ cut_tree <- cutree(heatmap_data$tree_row, k = 4)
 clusters <- tibble(ID = sum_data$Systematic, cl = cut_tree) %>%
   write_csv(here('second_round_imaging','clusters_Area.csv'))
 
-ck <- compareCluster(data = clusters, ID ~ cl, fun = 'enrichKEGG', org = 'spo')
+#ck <- compareCluster(data = clusters, ID ~ cl, fun = 'enrichKEGG', org = 'spo')
+```
+Create 2D density plot with the summary data, using the real time instead of the time points that come in the image name
+```{r}
+sum_data_tidy <- screen_data %>%
+  group_by(Systematic, Time) %>%
+  summarise(mean_size = median(AreaShape_Area), mean_TIME = mean(TIME))
+
+
+ggplot(sum_data_tidy, aes(x = mean_TIME, y = Systematic, colour = mean_size)) +
+  geom_tile()
+```
+
+Check wild type data
+```{r}
+only_wt <- screen_data %>%
+  filter(Systematic == 'wt' & AreaShape_Solidity > 0.9) 
+
+ggplot(only_wt, aes(x = TIME, y = AreaShape_Area, group = interaction(Well, Metadata_Plate_Name), 
+                    colour = Metadata_Plate_Name)) +
+  #stat_summary(fun.y = 'median', geom = 'point') +
+  facet_grid(~ Metadata_Plate_Name)+
+  geom_smooth()
 ```
