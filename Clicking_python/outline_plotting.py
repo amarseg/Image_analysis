@@ -13,11 +13,27 @@ from skimage.segmentation import clear_border
 from skimage.morphology import closing, square
 from skimage.color import label2rgb
 
+def plot_outlines(input_name, contours):
+    input_img = io.imread(opt.input_directory + '/'+ input_name)
+    fig, ax = plt.subplots()
+    ax.imshow(input_img, cmap=plt.cm.gray)
+
+    for n, contours in enumerate(contours):
+        ax.plot(contours[:, 1], contours[:, 0], linewidth=0.5)
+
+    ax.axis('image')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    input_no_ext = os.path.splitext(input_name)[0]
+    plt.savefig(opt.output_directory + 'outlines/' + input_no_ext + '.pdf')
+    plt.close()
+
+
 path = sys.argv[1]
 input_images = os.listdir(path+'/masks')
 all_dfs = []
 for image_name in input_images:
-	
+
 	mask=io.imread(path +'/masks/'+ image_name)
 	thresh = threshold_otsu(mask)
 	bw = closing(mask > thresh, square(3))
@@ -35,6 +51,7 @@ for image_name in input_images:
 		width.append(region.minor_axis_length)
 		solidity.append(region.solidity)
 		centroid.apped(region.centroid)
+
 	image_df = pd.DataFrame(
 		{'Image_name':image_name,
 		'Area':area,

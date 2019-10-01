@@ -98,19 +98,37 @@ normalised_omics <- omics_dataset %>%
   mutate(read_number.y = read_number.x / read_number.y) %>%
   mutate(log2foldchange = log2(read_number.y)) %>%
   rename('read_number.y', 'fold_change') %>%
-  transform(time_point.x = as.numeric(time_point.x))
+  transform(time_point.x = as.numeric(time_point.x)) %>%
+  group_by(time_point.x, molecule, ID) %>%
+  summarise(avg_log_fold_change = mean(log2foldchange))
+
+proper_hits <- read_csv('second_round_imaging/comparison_table.csv') %>%
+  filter(size_primary_1 == size_primary_2) %>%
+  filter(size_primary_2 == size_secondary)
 
 
 
-hits_omics <- inner_join(normalised_omics, hits_summary, by = c('ID' = 'values') ) %>%
-  filter(!is.na(log2foldchange) & !is.infinite(log2foldchange) & !is.nan(log2foldchange))
+gene_ids <- read_tsv('gene_IDs_names.tsv', skip = 1, col_names = c('Systematic ID','name','extra_names'))
+
+gene_ids[is.na(gene_ids$name),]$name <- gene_ids[is.na(gene_ids$name),]$`Systematic ID`
+
+hits_omics <- inner_join(normalised_omics, proper_hits, by = c('ID' = 'Systematic ID') ) %>%
+  #filter(!is.na(avg_log_fold_change) & !is.infinite(avg_log_fold_change) & !is.nan(avg_log_fold_change)) %>%
+  left_join(gene_ids, by = c('ID' = 'Systematic ID'))
+
+library(ggrepel)
+ggplot(hits_omics, aes(x = time_point.x, y = avg_log_fold_change, label = name, colour = size_secondary)) +
+  geom_point() +
+  geom_line(aes(group = name), alpha = 0.5)+
+  stat_summary( fun.y=mean, geom="line", size = 2, linetype = 'dashed') +
+  facet_grid(~molecule) +
+  theme_bw() +
+  geom_text_repel(data = filter(hits_omics, time_point.x == 11)) +
+  scale_color_brewer('Set3', type = 'qual') +
+  xlab('Time exposed to 1NM-PP1') +
+  ylab('Mean log2(fold change)')
 
 
-ggplot(hits_omics, aes(x = time_point.x, y = log2foldchange)) +
-  geom_point(color = 'gray')+
-  geom_line(color = 'gray', aes(group = interaction(ID,replicate)))+
-  stat_summary( fun.y=mean, geom="line", colour="red", size = 2) +
-  facet_grid(~ind*molecule)
 
 
 all_omics_hits <- left_join(normalised_omics, hits_summary, by = c('ID' = 'values') ) %>%

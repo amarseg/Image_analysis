@@ -10,6 +10,7 @@ library(tidyverse)
 library(here)
 library(heatmaply)
 library(pheatmap)
+library(RColorBrewer)
 ```
 
 First, we load the data. To produce the small tidy table, run the load and process data script in Olaf. The data is aprox. 8 Gb and can't be loaded into memory in my laptop at least.
@@ -27,22 +28,33 @@ First, we load the data. To produce the small tidy table, run the load and proce
 #   k = k+1
 # }
 
+gene_ids <- read_tsv('../gene_IDs_names.tsv', skip = 1, col_names = c('Systematic','name','extra_names'))
+
+gene_ids[is.na(gene_ids$name),]$name <- gene_ids[is.na(gene_ids$name),]$Systematic
+
 screen_data <- read_delim(here('second_round_imaging','extract_tidy.txt'), delim = ' ')
 
 ggplot(screen_data, aes(AreaShape_Solidity)) +
   geom_histogram()
 
 sum_data <- screen_data %>%
-  unite(new_id, c('Well','Metadata_Plate_Name','Systematic')) %>%
-  filter(AreaShape_Solidity > 0.8) %>%
-  group_by(new_id, Time) %>%
+  unite(new_id, c('Well','Metadata_Plate_Name','Systematic'), remove = F) %>%
+  filter(AreaShape_Solidity > 0.8 & Time <13) %>%
+  left_join(gene_ids, by = c('Systematic')) %>%
+  group_by(Systematic, Time, name) %>%
   summarise(mean_size = median(AreaShape_Area)) %>%
   spread(key = Time, value = mean_size) %>%
   write_csv(here('second_round_imaging','median_data.csv'))
 
-heatmap_data <- pheatmap(sum_data[,-1], cluster_cols = F, labels_row = sum_data$new_id, cutree_rows = 4)
+sum_data[is.na(sum_data$name),]$name <- 'wt'
 
+ord_sum_data <- sum_data[order(sum_data$`12`, decreasing = T),]
 
+heatmap_data <- pheatmap(ord_sum_data[,-1:-2], cluster_rows = F, labels_row = ord_sum_data$name, color = Purples(10), clustering_method = 'ward.D2',
+                         cluster_cols = F)
+
+cl <- data.frame(cl  = cutree(heatmap_data$tree_row, k = 6), ids = sum_data$Systematic) %>%
+  write_csv('../second_round_imaging/clusters.csv')
 ```
 
 Analyse the clusters from the heatmap using clusterprofiler
@@ -71,11 +83,121 @@ ggplot(sum_data_tidy, aes(x = mean_TIME, y = Systematic, colour = mean_size)) +
 Check wild type data
 ```{r}
 only_wt <- screen_data %>%
-  filter(Systematic == 'wt' & AreaShape_Solidity > 0.9) 
+  filter(AreaShape_Solidity > 0.9) %>%
+  group_by(Time, Metadata_Plate_Name, Systematic) %>%
+  summarise(median_area = median(AreaShape_Area), sd_area = sd(AreaShape_Area), mean_area = mean(AreaShape_Area))
 
-ggplot(only_wt, aes(x = TIME, y = AreaShape_Area, group = interaction(Well, Metadata_Plate_Name), 
-                    colour = Metadata_Plate_Name)) +
-  #stat_summary(fun.y = 'median', geom = 'point') +
+
+only_wt <- screen_data %>%
+  filter(Systematic == 'wt' & Time == 11) 
+
+ggplot(only_wt, aes( x = AreaShape_Area, group = Systematic, colour = Well, fill = Well)) +
+  facet_grid(~ Metadata_Plate_Name*Well)+
+  geom_histogram(alpha = 0.75) +
+  scale_x_continuous(limits = c(0, 3000))
+
+
+ggplot(filter(screen_data, AreaShape_Solidity > 0.9), aes(x = TIME, y = AreaShape_Area, group = Systematic)) +
   facet_grid(~ Metadata_Plate_Name)+
-  geom_smooth()
+  geom_smooth() +
+  geom_smooth(data = filter(only_wt, Systematic == 'wt'),aes( colour = 'red'))
+```
+
+
+```{r}
+tp0 <- screen_data %>%
+  filter(Time == 0 & AreaShape_Solidity > 0.9) %>%
+  group_by(Time, Metadata_Plate_Name, Systematic) %>%
+  summarise(median_area = median(AreaShape_Area, na.rm = T), sd_area = sd(AreaShape_Area), mean_area = mean(AreaShape_Area, na.rm = T))
+
+max_increase <- screen_data %>%
+  filter(AreaShape_Solidity > 0.9) %>%
+  group_by(Metadata_Plate_Name, Systematic) %>%
+  summarise(median_area = median(AreaShape_Area,na.rm = T), sd_area = sd(AreaShape_Area), mean_area = mean(AreaShape_Area, na.rm = T), max_area = max(AreaShape_Area)) %>%
+  left_join(tp0, by = c('Metadata_Plate_Name', 'Systematic'), suffix = c('.tp15','.tp0')) %>%
+  mutate(size_increase = max_area/median_area.tp0)
+
+tp_11 <- screen_data %>%
+  filter(Time == 11 & AreaShape_Solidity > 0.8)
+
+hits <- read_csv('../live_cell_imaging_cp/hits_i_guess.csv') %>%
+  mutate(size_primary_1 = case_when(mean_area_rep1 > 600 ~ 'big',
+                             mean_area_rep1 < 600  ~ 'small'),
+         size_primary_2 = case_when(mean_area_rep2 > 600 ~ 'big',
+                             mean_area_rep2 < 600  ~ 'small'))
+
+ggplot(hits, aes( x= mean_area_rep1, y = mean_area_rep2)) +
+  geom_point() 
+
+tp_11_annot <- tp_11 %>%
+  left_join(hits, by = c('Systematic' = 'Systematic ID')) 
+
+
+
+
+ggplot(tp_11_annot, aes(x = reorder(Systematic, AreaShape_Area, FUN = median), y = AreaShape_Area, colour = size_r)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+tp_11_median <- tp_11 %>%
+  group_by(Systematic) %>%
+  summarise(mean_area = mean(AreaShape_Area)) %>%
+  mutate(size_secondary = case_when(mean_area > 347 ~ 'big',
+                                    TRUE ~ 'small'))
+
+product_description <- read_tsv('../gene_IDs_names_products.tsv', col_names = c('ID',
+                                                                                'PomBaseID',
+                                                                                'name',
+                                                                                'chromosome',
+                                                                                'desc',
+                                                                                'UniProt',
+                                                                                'coding',
+                                                                                'alt_name')) %>%
+  select(ID, desc)
+
+all_data <- inner_join(hits, tp_11_median, by = c('Systematic ID' = 'Systematic')) %>%
+  inner_join(product_description, by = c('Systematic ID' = 'ID')) %>%
+  select(size_primary_1, size_primary_2, size_secondary, `Systematic ID`, desc) %>%
+  write_csv('../second_round_imaging/comparison_table.csv')
+```
+
+```{r}
+cell_areas_1 <- read_csv('../output_rep1/cell_areas.csv')
+cell_areas_2 <- read_csv('../output_rep2/areas_rep2.csv')
+
+wt_live_imaging <- tp_11 %>%
+  filter(Systematic == 'wt')
+for(id in unique(tp_11$Systematic))
+{
+  primary_1 <- filter(cell_areas_1, Metadata_Plate_Name == id) %>%
+    select(`Systematic ID`) %>%
+    add_column(screen_type = 'primary_1') %>%
+    rename(AreaShape_Area = `Systematic ID`)
+  
+  primary_2 <- filter(cell_areas_2, `Systematic ID` == id) %>%
+    select(AreaShape_Area) %>%
+    add_column(screen_type = 'primary_2')
+  
+  secondary <- filter(tp_11, Systematic == id) %>%
+    select(AreaShape_Area) %>%
+    add_column(screen_type = 'secondary')
+  
+  together <- bind_rows(primary_1, primary_2, secondary)
+  
+  ggplot(together, aes(AreaShape_Area, fill = screen_type)) +
+    geom_histogram(alpha = 0.75, bins = 50) +
+    geom_histogram(data = wt_live_imaging, aes(AreaShape_Area), alpha = 0.5, inherit.aes = F, bins = 50) +
+    facet_wrap(~Metadata_Plate_Name*Well) +
+    ggtitle(id) +
+    scale_x_log10()
+  
+  ggsave(paste0('../histogram_replicates/',id,'.jpg'))
+}
+```
+
+
+```{r}
+sum_1 <- read_csv('../output_rep1/summary_rep1_pval_0.15.csv')
+sum_2 <- read_csv('../output_rep2/statistics_rep2_pvalue_0.15.csv')
+
 ```
