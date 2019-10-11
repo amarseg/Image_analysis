@@ -8,9 +8,11 @@ import sys
 
 from skimage import measure,io
 from skimage.filters import threshold_otsu
-from skimage.segmentation import clear_border
+from skimage.segmentation import clear_border, mark_boundaries
 from skimage.morphology import closing, square
 from skimage.color import label2rgb,rgb2gray
+from skimage.util import invert,img_as_float64
+from skimage.feature import canny
 
 def plot_outlines(input_name, contours, file_path):
 	input_img = io.imread(path + '/'+ input_name)
@@ -33,13 +35,13 @@ def plot_outlines(input_name, contours, file_path):
 path = sys.argv[1]
 input_images =  sorted([f for f in os.listdir(path) if f.endswith('.tif')])
 print(input_images)
-mask_images = sorted([f for f in os.listdir(path) if f.endswith('.png')])
+mask_images = sorted([f for f in os.listdir(path) if f.endswith('ties_.png')])
 all_dfs = []
 
 print('Paths are correct')
 for image_name, mask_name in zip(input_images, mask_images) :
 
-	mask= io.imread(path +'/' + mask_name)
+	mask= io.imread(path +'/' + mask_name, as_gray = True)
 	mask_bw = rgb2gray(mask)
 	thresh = threshold_otsu(mask_bw)
 	bw = closing(mask_bw > thresh, square(3))
@@ -59,10 +61,20 @@ for image_name, mask_name in zip(input_images, mask_images) :
 		solidity.append(region.solidity)
 		centroid.append(region.centroid)
 
-	plot_outlines(input_name = image_name,
-				contours = measure.find_contours(mask_bw, 0.9),
-				file_path = path
-	)
+	# plot_outlines(input_name = mask_name,
+	# 			contours = measure.find_contours(cleared, 0.8),
+	# 			file_path = path
+	# )
+
+
+	cell_edges = mark_boundaries(mask_name,img_as_float64(cleared))
+
+	plt.imshow(cell_edges)
+	plt.axis('off')
+
+	plt.savefig(path + '/outlines/' + input_no_ext + '.jpg')
+	plt.close()
+
 	print('Print Outlines')
 	image_df = pd.DataFrame(
 		{'Image_name':image_name,
