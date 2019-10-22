@@ -8,7 +8,7 @@ import sys
 
 from scipy import ndimage as ndi
 from skimage import measure, io
-from skimage.filters import threshold_otsu
+from skimage.filters import threshold_otsu, apply_hysteresis_threshold, sobel
 from skimage.segmentation import clear_border, mark_boundaries
 from skimage.morphology import closing, square,watershed
 from skimage.color import label2rgb,rgb2gray
@@ -62,24 +62,60 @@ image_label_overlay = label2rgb(label_image, image=image)
 # plt.show()
 
 ##############Watershed###############################
-distance = ndi.distance_transform_edt(mask[:,:,1])
-local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)),
-                            labels=mask[:,:,1])
-markers = ndi.label(local_maxi)[0]
-labels = watershed(-distance, markers, mask=mask[:,:,1])
+# distance = ndi.distance_transform_edt(mask[:,:,1])
+# local_maxi = peak_local_max(distance, indices=False, footprint=np.ones((3, 3)),
+#                             labels=mask[:,:,1])
+# markers = ndi.label(local_maxi)[0]
+# labels = watershed(-distance, markers, mask=mask[:,:,1])
+#
+# fig, axes = plt.subplots(ncols=3, figsize=(9, 3), sharex=True, sharey=True)
+# ax = axes.ravel()
+#
+# ax[0].imshow(mask[:,:,1], cmap=plt.cm.gray)
+# ax[0].set_title('Overlapping objects')
+# ax[1].imshow(-distance, cmap=plt.cm.gray)
+# ax[1].set_title('Distances')
+# ax[2].imshow(labels, cmap=plt.cm.nipy_spectral)
+# ax[2].set_title('Separated objects')
+#
+# for a in ax:
+#     a.set_axis_off()
+#
+# fig.tight_layout()
+# plt.show()
 
-fig, axes = plt.subplots(ncols=3, figsize=(9, 3), sharex=True, sharey=True)
-ax = axes.ravel()
+##############Hysteresis threshold
+image = mask[:,:,1]
+fig, ax = plt.subplots(nrows=2, ncols=2)
 
-ax[0].imshow(mask[:,:,1], cmap=plt.cm.gray)
-ax[0].set_title('Overlapping objects')
-ax[1].imshow(-distance, cmap=plt.cm.gray)
-ax[1].set_title('Distances')
-ax[2].imshow(labels, cmap=plt.cm.nipy_spectral)
-ax[2].set_title('Separated objects')
+edges = sobel(image)
 
-for a in ax:
-    a.set_axis_off()
+low = 0.1
+high = 0.35
 
-fig.tight_layout()
+lowt = (edges > low).astype(int)
+hight = (edges > high).astype(int)
+hyst = apply_hysteresis_threshold(edges, low, high)
+
+labeled_coins, _ = ndi.label(ndi.binary_fill_holes(edges))
+image_label_overlay = label2rgb(labeled_coins, image=image)
+
+
+ax[0, 0].imshow(image, cmap='gray')
+ax[0, 0].set_title('Original image')
+
+ax[0, 1].imshow(edges, cmap='magma')
+ax[0, 1].set_title('Sobel edges')
+
+ax[1, 0].imshow(lowt, cmap='magma')
+ax[1, 0].set_title('Low threshold')
+
+ax[1, 1].imshow(image_label_overlay, cmap='magma')
+ax[1, 1].set_title('Hysteresis threshold')
+
+for a in ax.ravel():
+    a.axis('off')
+
+plt.tight_layout()
+
 plt.show()

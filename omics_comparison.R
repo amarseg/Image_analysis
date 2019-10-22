@@ -117,18 +117,29 @@ hits_omics <- inner_join(normalised_omics, proper_hits, by = c('ID' = 'Systemati
   left_join(gene_ids, by = c('ID' = 'Systematic ID'))
 
 library(ggrepel)
-ggplot(hits_omics, aes(x = time_point.x, y = avg_log_fold_change, label = name, colour = size_secondary)) +
+p1<- ggplot(hits_omics, aes(x = time_point.x, y = avg_log_fold_change, label = name, colour = size_secondary)) +
   geom_point() +
   geom_line(aes(group = name), alpha = 0.5)+
-  stat_summary( fun.y=mean, geom="line", size = 2, linetype = 'dashed') +
-  facet_grid(~molecule) +
+ # stat_summary( fun.y=mean, geom="line", size = 2, linetype = 'dashed') +
+  facet_wrap(~molecule,scales = 'free') +
   theme_bw() +
-  geom_text_repel(data = filter(hits_omics, time_point.x == 11)) +
-  scale_color_brewer('Set3', type = 'qual') +
+  geom_text_repel(data = filter(hits_omics, time_point.x == 11), colour = 'black', size = 4.75) +
   xlab('Time exposed to 1NM-PP1') +
   ylab('Mean log2(fold change)')
 
+ggsave('C:/Users/am4613/Desktop/all_genes.png')
 
+p2 <- ggplot(hits_omics, aes(x = time_point.x, y = avg_log_fold_change, label = name, colour = size_secondary)) +
+  #geom_point() +
+  #geom_line(aes(group = name), alpha = 0.5)+
+  stat_summary( fun.y=mean, geom="line", size = 2, linetype = 'dashed') +
+  facet_wrap(~molecule) +
+  theme_bw() +
+  #geom_text_repel(data = filter(hits_omics, time_point.x == 11), colour = 'black', size = 4.75) +
+  xlab('Time exposed to 1NM-PP1') +
+  ylab('Mean log2(fold change)') 
+
+ggsave('C:/Users/am4613/Desktop/avg.png')
 
 
 all_omics_hits <- left_join(normalised_omics, hits_summary, by = c('ID' = 'values') ) %>%
